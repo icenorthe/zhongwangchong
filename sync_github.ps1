@@ -38,6 +38,14 @@ if (-not $RepoUrl -or $RepoUrl.Trim() -eq "") {
   $RepoUrl = $env:GITHUB_REPO_URL
 }
 
+if ($RepoUrl -and $RepoUrl.Trim() -ne "") {
+  $RepoUrl = $RepoUrl.Trim()
+  # Accept GitHub web URLs like https://github.com/user/repo and convert to clone URL
+  if ($RepoUrl -match '^https?://github\.com/[^/]+/[^/]+/?$') {
+    $RepoUrl = $RepoUrl.TrimEnd('/') + '.git'
+  }
+}
+
 $hasOrigin = $false
 try {
   $originUrl = (& git remote get-url origin 2>$null).Trim()
