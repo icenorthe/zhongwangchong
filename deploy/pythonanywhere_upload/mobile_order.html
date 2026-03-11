@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>中网充代下单</title>
+  <style>
+    :root {
+      --bg: #f3f4f6;
+      --card: #ffffff;
+      --text: #111827;
+      --muted: #6b7280;
+      --primary: #111111;
+      --primary-hover: #000000;
+      --danger: #b91c1c;
+      --ok: #166534;
+      --radius: 14px;
+      --shadow: 0 10px 24px rgba(17, 24, 39, 0.08);
+      --border: #e5e7eb;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", sans-serif;
+      background: linear-gradient(180deg, #eef2f7 0%, #f3f4f6 45%, #f8fafc 100%);
+      color: var(--text);
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 14px;
+    }
+
+    .card {
+      width: min(100%, 540px);
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      padding: 18px;
+    }
+
+    h1 {
+      margin: 0 0 4px;
+      font-size: 23px;
+    }
+
+    p {
+      margin: 0 0 16px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      margin-bottom: 6px;
+      color: var(--muted);
+    }
+
+    input, textarea, button {
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      font-size: 15px;
+      padding: 11px 12px;
+      background: #fff;
+    }
+
+    select {
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      font-size: 15px;
+      padding: 11px 12px;
+      background: #fff;
+    }
+
+    .inline {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .field { margin-bottom: 12px; }
+
+    .money-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 6px;
+    }
+
+    .money-item {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+      cursor: pointer;
+      display: block;
+      background: #fff;
+      position: relative;
+    }
+
+    .money-item input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .money-item strong {
+      display: block;
+      font-size: 22px;
+      margin-bottom: 2px;
+    }
+
+    .money-item span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .money-item:has(input:checked) {
+      border-color: #111111;
+      background: #f9fafb;
+    }
+
+    button {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .2s ease;
+    }
+
+    button:hover { background: var(--primary-hover); }
+
+    #status {
+      margin-top: 14px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: #f9fafb;
+      border: 1px solid var(--border);
+      font-size: 14px;
+      word-break: break-word;
+    }
+
+    .ok { color: var(--ok); }
+    .fail { color: var(--danger); }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>充电代下单</h1>
+    <p>填写设备编码和插座号即可下单，系统会自动处理。</p>
+    <p><a href="/admin" style="color:#111827;">查看订单后台</a></p>
+
+    <form id="order-form">
+      <div class="field">
+        <label for="station_name">站点名称（可选）</label>
+        <input id="station_name" name="station_name" placeholder="例如：29号站成都大学综合楼二号充电区V3.0">
+      </div>
+
+      <div class="field">
+        <label for="device_code">设备编码</label>
+        <input id="device_code" name="device_code" placeholder="例如：13061856473" required>
+      </div>
+
+      <div class="inline">
+        <div class="field">
+          <label for="socket_no">插座号</label>
+          <select id="socket_no" name="socket_no"></select>
+        </div>
+
+        <div class="field">
+          <label>充值金额</label>
+          <div class="money-grid">
+            <label class="money-item">
+              <input type="radio" name="amount_yuan" value="1" checked>
+              <strong>¥1</strong>
+              <span>约 207 分钟</span>
+            </label>
+            <label class="money-item">
+              <input type="radio" name="amount_yuan" value="2">
+              <strong>¥2</strong>
+              <span>约 414 分钟</span>
+            </label>
+            <label class="money-item">
+              <input type="radio" name="amount_yuan" value="3">
+              <strong>¥3</strong>
+              <span>约 621 分钟</span>
+            </label>
+            <label class="money-item">
+              <input type="radio" name="amount_yuan" value="4">
+              <strong>¥4</strong>
+              <span>约 828 分钟</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="remark">备注（可选）</label>
+        <textarea id="remark" name="remark" rows="2" placeholder="例如：2号口靠门"></textarea>
+      </div>
+
+      <button type="submit">立即下单充电</button>
+    </form>
+
+    <div id="status">等待下单...</div>
+  </main>
+
+  <script>
+    const form = document.getElementById("order-form");
+    const statusBox = document.getElementById("status");
+    const socketSelect = document.getElementById("socket_no");
+    let pollTimer = null;
+
+    function initSocketOptions() {
+      for (let i = 1; i <= 10; i += 1) {
+        const opt = document.createElement("option");
+        opt.value = String(i);
+        opt.textContent = `${i} 号插座`;
+        socketSelect.appendChild(opt);
+      }
+    }
+
+    function prefillByQuery() {
+      const params = new URLSearchParams(window.location.search);
+      const stationName = params.get("station_name");
+      const deviceCode = params.get("device_code");
+      const socketNo = params.get("socket_no");
+      const amountYuan = params.get("amount");
+
+      if (stationName) form.station_name.value = stationName;
+      if (deviceCode) form.device_code.value = deviceCode;
+      if (socketNo) socketSelect.value = socketNo;
+      if (amountYuan) {
+        const radio = form.querySelector(`input[name="amount_yuan"][value="${amountYuan}"]`);
+        if (radio) radio.checked = true;
+      }
+    }
+
+    function setStatus(text, klass = "") {
+      statusBox.className = klass;
+      statusBox.textContent = text;
+    }
+
+    async function fetchOrder(orderId) {
+      const resp = await fetch(`/api/orders/${orderId}`);
+      if (!resp.ok) {
+        throw new Error(`查询失败: ${resp.status}`);
+      }
+      return await resp.json();
+    }
+
+    function startPolling(orderId) {
+      if (pollTimer) {
+        clearInterval(pollTimer);
+      }
+
+      pollTimer = setInterval(async () => {
+        try {
+          const order = await fetchOrder(orderId);
+          setStatus(
+            `订单 #${order.id} | 状态：${order.status} | 结果：${order.result_message || "处理中"}`
+          );
+
+          if (order.status === "SUCCESS") {
+            setStatus(
+              `订单 #${order.id} 成功，平台单号：${order.vendor_order_id || "无"}`,
+              "ok"
+            );
+            clearInterval(pollTimer);
+            pollTimer = null;
+          } else if (order.status === "FAILED") {
+            setStatus(
+              `订单 #${order.id} 失败，原因：${order.result_message || "未知"}`,
+              "fail"
+            );
+            clearInterval(pollTimer);
+            pollTimer = null;
+          }
+        } catch (err) {
+          setStatus(`轮询异常：${err.message}`, "fail");
+        }
+      }, 3000);
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const amountRadio = form.querySelector("input[name='amount_yuan']:checked");
+      const payload = {
+        station_name: form.station_name.value.trim(),
+        device_code: form.device_code.value.trim(),
+        socket_no: Number(form.socket_no.value),
+        amount_yuan: Number(amountRadio ? amountRadio.value : "1"),
+        remark: form.remark.value.trim(),
+      };
+
+      setStatus("正在提交订单...");
+
+      try {
+        const resp = await fetch("/api/orders", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        const data = await resp.json();
+        if (!resp.ok) {
+          throw new Error(data.detail || `请求失败: ${resp.status}`);
+        }
+
+        setStatus(`订单已创建（#${data.id}），正在处理...`);
+        startPolling(data.id);
+      } catch (err) {
+        setStatus(`提交失败：${err.message}`, "fail");
+      }
+    });
+
+    initSocketOptions();
+    prefillByQuery();
+  </script>
+</body>
+</html>

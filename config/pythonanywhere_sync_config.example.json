@@ -1,0 +1,21 @@
+﻿{
+  "username": "icenorth",
+  "api_token": "replace-with-pythonanywhere-api-token",
+  "api_host": "www.pythonanywhere.com",
+  "domain": "icenorth.pythonanywhere.com",
+  "remote_project_path": "/home/icenorth/zhongwang-charge",
+  "files": [
+    "services/mobile_charge_server.py",
+    "services/pythonanywhere_app.py",
+    "services/project_paths.py",
+    "services/__init__.py",
+    "assets/web/mobile_order.html",
+    "assets/web/admin_orders.html",
+    "config/stations.json",
+    "config/pythonanywhere_secrets.json",
+    "config/gateway_config.json",
+    "requirements_mobile.txt",
+    "docs/PythonAnywhere部署说明.md"
+  ]
+}
+

@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>订单后台</title>
+  <style>
+    :root {
+      --bg: #f3f4f6;
+      --card: #ffffff;
+      --text: #111827;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --ok: #166534;
+      --fail: #b91c1c;
+      --pending: #92400e;
+      --processing: #1d4ed8;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", sans-serif;
+      background: linear-gradient(180deg, #eef2f7 0%, #f3f4f6 50%, #f9fafb 100%);
+      color: var(--text);
+      padding: 16px;
+    }
+    .wrap {
+      max-width: 1220px;
+      margin: 0 auto;
+      display: grid;
+      gap: 12px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+    }
+    .top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    h1 {
+      margin: 0;
+      font-size: 24px;
+    }
+    .muted {
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    input, select, button {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 14px;
+      background: #fff;
+    }
+    button {
+      cursor: pointer;
+      border-color: #111111;
+      background: #111111;
+      color: #fff;
+      font-weight: 600;
+    }
+    button.secondary {
+      background: #fff;
+      color: #111111;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .stat {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+      background: #fafafa;
+    }
+    .stat b {
+      display: block;
+      font-size: 24px;
+      margin-top: 4px;
+    }
+    .table-wrap {
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 980px;
+    }
+    th, td {
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      padding: 10px 8px;
+      font-size: 14px;
+      vertical-align: top;
+    }
+    th {
+      background: #f9fafb;
+      font-size: 13px;
+      color: var(--muted);
+      position: sticky;
+      top: 0;
+    }
+    .status {
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 999px;
+      display: inline-block;
+      font-size: 12px;
+      border: 1px solid var(--border);
+    }
+    .SUCCESS { color: var(--ok); border-color: #86efac; background: #f0fdf4; }
+    .FAILED { color: var(--fail); border-color: #fecaca; background: #fef2f2; }
+    .PENDING { color: var(--pending); border-color: #fde68a; background: #fffbeb; }
+    .PROCESSING { color: var(--processing); border-color: #bfdbfe; background: #eff6ff; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="card top">
+      <div>
+        <h1>订单后台</h1>
+        <div class="muted">查看下单记录、处理状态、失败重试</div>
+      </div>
+      <div class="controls">
+        <input id="token" placeholder="管理口令（若已设置）">
+        <input id="deviceCode" placeholder="设备编码筛选">
+        <select id="statusFilter">
+          <option value="">全部状态</option>
+          <option value="PENDING">PENDING</option>
+          <option value="PROCESSING">PROCESSING</option>
+          <option value="SUCCESS">SUCCESS</option>
+          <option value="FAILED">FAILED</option>
+        </select>
+        <button class="secondary" id="reloadGateway">重载网关配置</button>
+        <button id="refresh">刷新</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="grid" id="statGrid">
+        <div class="stat"><div class="muted">总订单</div><b id="s_total">0</b></div>
+        <div class="stat"><div class="muted">待处理</div><b id="s_pending">0</b></div>
+        <div class="stat"><div class="muted">处理中</div><b id="s_processing">0</b></div>
+        <div class="stat"><div class="muted">成功</div><b id="s_success">0</b></div>
+        <div class="stat"><div class="muted">失败</div><b id="s_failed">0</b></div>
+      </div>
+      <div class="muted" id="meta" style="margin-top:8px;">网关模式：-</div>
+    </section>
+
+    <section class="card table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>站点</th>
+            <th>设备编码</th>
+            <th>插座</th>
+            <th>金额</th>
+            <th>状态</th>
+            <th>结果</th>
+            <th>平台单号</th>
+            <th>创建时间</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </section>
+  </div>
+
+  <script>
+    const initialToken = "__ADMIN_TOKEN__";
+    const tokenInput = document.getElementById("token");
+    const deviceCodeInput = document.getElementById("deviceCode");
+    const statusFilter = document.getElementById("statusFilter");
+    const meta = document.getElementById("meta");
+    const tbody = document.getElementById("tbody");
+
+    tokenInput.value = initialToken;
+
+    function withToken(url) {
+      const token = tokenInput.value.trim();
+      if (!token) return url;
+      const u = new URL(url, window.location.origin);
+      u.searchParams.set("token", token);
+      return u.pathname + u.search;
+    }
+
+    async function requestJson(url, options) {
+      const resp = await fetch(withToken(url), options);
+      const text = await resp.text();
+      let data;
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        data = { raw: text };
+      }
+      if (!resp.ok) {
+        throw new Error(data.detail || data.raw || `HTTP ${resp.status}`);
+      }
+      return data;
+    }
+
+    function setStats(stats) {
+      document.getElementById("s_total").textContent = stats.total ?? 0;
+      document.getElementById("s_pending").textContent = stats.pending ?? 0;
+      document.getElementById("s_processing").textContent = stats.processing ?? 0;
+      document.getElementById("s_success").textContent = stats.success ?? 0;
+      document.getElementById("s_failed").textContent = stats.failed ?? 0;
+      meta.textContent = `网关模式：${stats.gateway_mode || "-"} | 最新刷新：${new Date().toLocaleString()}`;
+    }
+
+    function renderOrders(orders) {
+      if (!orders.length) {
+        tbody.innerHTML = `<tr><td colspan="10" class="muted">暂无订单</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = orders.map((o) => {
+        const retryBtn = o.status === "FAILED"
+          ? `<button class="secondary" onclick="retryOrder(${o.id})">重试</button>`
+          : "-";
+        return `
+          <tr>
+            <td>${o.id}</td>
+            <td>${o.station_name || "-"}</td>
+            <td>${o.device_code}</td>
+            <td>${o.socket_no} 号</td>
+            <td>¥${Number(o.amount_yuan).toFixed(2)}</td>
+            <td><span class="status ${o.status}">${o.status}</span></td>
+            <td>${o.result_message || "-"}</td>
+            <td>${o.vendor_order_id || "-"}</td>
+            <td>${new Date(o.created_at).toLocaleString()}</td>
+            <td>${retryBtn}</td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    async function refreshAll() {
+      try {
+        const status = statusFilter.value.trim();
+        const deviceCode = deviceCodeInput.value.trim();
+        const query = new URLSearchParams({ limit: "200" });
+        if (status) query.set("status", status);
+        if (deviceCode) query.set("device_code", deviceCode);
+
+        const [stats, orders] = await Promise.all([
+          requestJson("/api/admin/stats"),
+          requestJson(`/api/orders?${query.toString()}`),
+        ]);
+        setStats(stats);
+        renderOrders(orders);
+      } catch (err) {
+        meta.textContent = `加载失败：${err.message}`;
+      }
+    }
+
+    async function retryOrder(orderId) {
+      try {
+        await requestJson(`/api/admin/orders/${orderId}/retry`, { method: "POST" });
+        await refreshAll();
+      } catch (err) {
+        alert(`重试失败：${err.message}`);
+      }
+    }
+
+    async function reloadGateway() {
+      try {
+        await requestJson("/api/admin/reload-gateway", { method: "POST" });
+        await refreshAll();
+      } catch (err) {
+        alert(`重载失败：${err.message}`);
+      }
+    }
+
+    window.retryOrder = retryOrder;
+    document.getElementById("refresh").addEventListener("click", refreshAll);
+    document.getElementById("reloadGateway").addEventListener("click", reloadGateway);
+    statusFilter.addEventListener("change", refreshAll);
+    deviceCodeInput.addEventListener("change", refreshAll);
+
+    refreshAll();
+    setInterval(refreshAll, 5000);
+  </script>
+</body>
+</html>

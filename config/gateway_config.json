@@ -1,0 +1,13 @@
+﻿{
+ "mode": "official",
+ "base_url": "http://127.0.0.1:9000",
+ "start_path": "/api/start-charge",
+ "token": "local-bridge",
+ "headers": {},
+ "extra_payload": {},
+ "success_field": "success",
+ "success_expected": true,
+ "message_field": "message",
+ "order_id_field": "order_id",
+ "timeout_seconds": 30
+}

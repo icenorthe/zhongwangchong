@@ -1,0 +1,9 @@
+﻿{
+  "base_url": "https://icenorth.pythonanywhere.com",
+  "agent_name": "office-pc",
+  "agent_token": "change-this-agent-token",
+  "poll_seconds": 5,
+  "runner_command": "python services\\local_charge_runner.py",
+  "runner_timeout_seconds": 120
+}
+

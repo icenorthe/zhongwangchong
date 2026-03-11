@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+
+# Envs
+.venv/
+venv/
+env/
+ENV/
+
+# IDE/OS
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+Desktop.ini
+
+# Logs & runtime artifacts
+*.log
+runtime/**/logs/
+runtime/**/tmp/
+runtime/**/cache/
+runtime/orders.db
+runtime/runner_screenshots/
+
+# Local configs / secrets (commit *.example.json instead)
+config/cloud_agent_config.json
+config/pythonanywhere_secrets.json
+config/pythonanywhere_sync_config.json
+config/wechat_rpa_config.json
+
+# Accidental scratch files
+None
+str
+dict\[str*
+list\[dict\[str*
+tuple\[*
