@@ -21,11 +21,11 @@ function Git([string]$args) {
 }
 
 if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
-  throw "git 未安装或未加入 PATH。请先安装 Git。"
+  throw "git is not installed or not in PATH. Please install Git first."
 }
 
 if (-not (Test-Path -LiteralPath ".git")) {
-  throw "当前目录不是 Git 仓库（找不到 .git）。请在项目根目录运行。"
+  throw "Not a Git repo (missing .git). Run this from the project root."
 }
 
 if (-not $Branch -or $Branch.Trim() -eq "") {
@@ -46,10 +46,10 @@ try {
 if (-not $hasOrigin) {
   if (-not $RepoUrl -or $RepoUrl.Trim() -eq "") {
     Write-Host ""
-    Write-Host "未检测到 remote 'origin'。请提供仓库地址，例如："
+    Write-Host "No remote named 'origin'. Provide the repo URL, e.g.:"
     Write-Host "  https://github.com/icenorthe/zhongwangchong.git"
     Write-Host ""
-    throw "用法：./sync_github.ps1 -RepoUrl <url>   或设置环境变量 GITHUB_REPO_URL"
+    throw "Usage: ./sync_github.ps1 -RepoUrl <url>  or set env var GITHUB_REPO_URL"
   }
   Git "remote add origin `"$RepoUrl`""
 }
@@ -66,21 +66,20 @@ if ($status -and $status.Trim().Length -gt 0) {
     throw
   }
 } else {
-  Write-Host "工作区无变更，跳过 commit。"
+  Write-Host "No working tree changes; skipping commit."
 }
 
 try {
   Git "fetch origin --prune"
 } catch {
-  Write-Host "fetch 失败（可能是首次推送或网络/权限问题），继续尝试 push。"
+  Write-Host "fetch failed (maybe first push or auth/network issue); continuing."
 }
 
 try {
   Git "pull --rebase origin $Branch"
 } catch {
-  Write-Host "pull --rebase 失败（可能远端还没有分支），继续尝试 push。"
+  Write-Host "pull --rebase failed (remote branch may not exist yet); continuing."
 }
 
 Git "push -u origin $Branch"
-Write-Host "完成。"
-
+Write-Host "Done."
