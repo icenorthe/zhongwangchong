@@ -220,10 +220,16 @@ def click_point(name: str, point: tuple[int, int], delay_seconds: float, clicks:
 
 
 def paste_text(text: str, delay_seconds: float) -> None:
-    pyperclip.copy(text)
+    # 先清空输入框
     pyautogui.hotkey("ctrl", "a")
     time.sleep(0.1)
-    pyautogui.hotkey("ctrl", "v")
+    pyautogui.press("delete")
+    time.sleep(0.2)
+    # 逐字符粘贴，每次触发一次input事件，让微信小程序感知到输入
+    for char in text:
+        pyperclip.copy(char)
+        pyautogui.hotkey("ctrl", "v")
+        time.sleep(0.06)
     time.sleep(delay_seconds)
 
 
@@ -357,6 +363,8 @@ def run_rpa(order: dict[str, Any], config: dict[str, Any]) -> tuple[bool, str, s
         if not search_text:
             search_text = str(context.get("device_code", "")).strip()
         paste_text(search_text, delay)
+        # 等待小程序内部input事件处理完毕，再点击搜索按钮
+        time.sleep(0.8)
         search_btn_clicked = click_target(
             config,
             name="search_btn",
