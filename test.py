@@ -10,7 +10,7 @@ order = {
     "id": "test001",
     "station_name": "29号站成都大学综合楼二号充电区V3.0",
     "device_code": "13061856473",
-    "socket_no": 2,
+    "socket_no": 1,
     "amount_yuan": 1
 }
 

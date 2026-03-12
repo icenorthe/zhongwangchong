@@ -97,6 +97,8 @@ def run_local_runner(command: str, timeout_seconds: int, order: dict[str, Any]) 
             input=raw_input,
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=timeout_seconds,
             shell=True,
         )

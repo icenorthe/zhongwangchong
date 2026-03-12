@@ -184,7 +184,7 @@ def click_target(
     return True
 
 
-def activate_wechat_window(title_keywords: list[str], delay_seconds: float) -> None:
+def activate_wechat_window(title_keywords: list[str], delay_seconds: float) -> tuple[int, int, int, int]:
     import win32gui
     import win32con
 
@@ -211,6 +211,7 @@ def activate_wechat_window(title_keywords: list[str], delay_seconds: float) -> N
     pyautogui.click(cx, cy)
     time.sleep(delay_seconds)
     write_log(f"activated hwnd={hwnd} rect={rect} clicked=({cx},{cy})")
+    return rect  # (left, top, right, bottom)
 
 
 def click_point(name: str, point: tuple[int, int], delay_seconds: float, clicks: int = 1) -> None:
@@ -319,7 +320,7 @@ def run_rpa(order: dict[str, Any], config: dict[str, Any]) -> tuple[bool, str, s
     launch_ad_wait = float(config.get("launch_ad_wait_seconds", 0))
     post_ad_wait = float(config.get("post_ad_wait_seconds", 0))
 
-    activate_wechat_window(title_keywords, delay)
+    window_rect = activate_wechat_window(title_keywords, delay)
     maybe_wait(launch_ad_wait, "launch ad countdown")
 
     click_target(
@@ -378,28 +379,32 @@ def run_rpa(order: dict[str, Any], config: dict[str, Any]) -> tuple[bool, str, s
         if not search_btn_clicked and config.get("search_submit_key"):
             press_key(str(config.get("search_submit_key")), delay)
 
-    if config.get("station_result_image") or config.get("station_result_point"):
-        click_target(
-            config,
-            name="station_result",
-            point_key="station_result_point",
-            template_key="station_result_image",
-            region_key="station_result_region",
-            delay_seconds=delay,
-            timeout_seconds=float(config.get("station_result_timeout_seconds", 5)),
-        )
+    # 点击搜索结果第一条：用窗口位置+固定偏移计算绝对坐标
+    # 偏移量基于实测：结果卡片在窗口内 x偏移292px，y偏移371px
+    # 等待搜索结果加载
+    time.sleep(float(config.get("station_result_timeout_seconds", 1.5)))
+    win_left, win_top = window_rect[0], window_rect[1]
+    result_x = win_left + int(config.get("station_result_offset_x", 292))
+    result_y = win_top + int(config.get("station_result_offset_y", 371))
+    write_log(f"click station_result (window-relative) at ({result_x},{result_y})")
+    pyautogui.click(result_x, result_y)
+    # 等待插座选择页面加载完成
+    time.sleep(float(config.get("socket_page_load_seconds", 2.0)))
 
+    socket_no = int(context["socket_no"])
     socket_clicked = click_target(
         config,
-        name="socket",
+        name=f"socket_{socket_no}",
         point_key=None,
-        template_key=socket_template_key(int(context["socket_no"])),
+        template_key=socket_template_key(socket_no),
         region_key="socket_region",
         delay_seconds=delay,
+        timeout_seconds=float(config.get("socket_timeout_seconds", 5)),
         required=False,
     )
     if not socket_clicked:
-        click_point("socket_point", socket_point(config, int(context["socket_no"])), delay)
+        write_log(f"socket_{socket_no} template not found, falling back to coordinate")
+        click_point("socket_point", socket_point(config, socket_no), delay)
 
     click_target(
         config,
@@ -411,6 +416,8 @@ def run_rpa(order: dict[str, Any], config: dict[str, Any]) -> tuple[bool, str, s
         timeout_seconds=float(config.get("go_charge_timeout_seconds", 3)),
         required=False,
     )
+    # 等待充电页面加载完成（转圈结束）
+    time.sleep(float(config.get("charge_page_load_seconds", 3.0)))
 
     amount_clicked = click_target(
         config,
@@ -419,42 +426,49 @@ def run_rpa(order: dict[str, Any], config: dict[str, Any]) -> tuple[bool, str, s
         template_key=amount_template_key(float(context["amount_yuan"])),
         region_key="amount_region",
         delay_seconds=delay,
+        timeout_seconds=float(config.get("amount_timeout_seconds", 8)),
         required=False,
     )
     if not amount_clicked:
-        click_point("amount_point", amount_point(config, float(context["amount_yuan"])), delay)
+        # 模板图失败，用窗口相对坐标兜底（金额选项在窗口内位置相对固定）
+        win_left2, win_top2 = window_rect[0], window_rect[1]
+        amount_yuan = float(context["amount_yuan"])
+        # 金额选项偏移：1元、2元、3元、4元，可在config里覆盖
+        amount_offsets = {
+            1: (int(config.get("amount_1_offset_x", 205)), int(config.get("amount_1_offset_y", 709))),
+            2: (int(config.get("amount_2_offset_x", 368)), int(config.get("amount_2_offset_y", 709))),
+            3: (int(config.get("amount_3_offset_x", 530)), int(config.get("amount_3_offset_y", 709))),
+            4: (int(config.get("amount_4_offset_x", 205)), int(config.get("amount_4_offset_y", 790))),
+        }
+        key = int(amount_yuan) if amount_yuan.is_integer() else int(amount_yuan)
+        if key in amount_offsets:
+            ax = win_left2 + amount_offsets[key][0]
+            ay = win_top2 + amount_offsets[key][1]
+            write_log(f"click amount_{key} fallback (window-relative) at ({ax},{ay})")
+            pyautogui.click(ax, ay)
+            time.sleep(delay)
+        else:
+            write_log(f"no fallback for amount {amount_yuan}, skip")
 
-    click_target(
-        config,
-        name="submit_order",
-        point_key="submit_order_point",
-        template_key="submit_order_image",
-        region_key="submit_order_region",
-        delay_seconds=delay,
-    )
+    # 1. 点击「立即支付」- 直接用窗口相对坐标（最可靠）
+    write_log(f"payment step: window_rect={window_rect}")
+    win_left2, win_top2 = window_rect[0], window_rect[1]
+    pay_now_x = win_left2 + int(config.get("pay_now_offset_x", 424))
+    pay_now_y = win_top2 + int(config.get("pay_now_offset_y", 891))
+    write_log(f"click pay_now (window-relative) at ({pay_now_x},{pay_now_y})")
+    pyautogui.click(pay_now_x, pay_now_y)
+    time.sleep(delay)
 
-    payment_method = str(config.get("payment_method", "")).strip().lower()
-    if payment_method == "wechat" or config.get("wechat_pay_image") or config.get("wechat_pay_point"):
-        click_target(
-            config,
-            name="wechat_pay",
-            point_key="wechat_pay_point",
-            template_key="wechat_pay_image",
-            region_key="wechat_pay_region",
-            delay_seconds=delay,
-            timeout_seconds=float(config.get("wechat_pay_timeout_seconds", 3)),
-            required=False,
-        )
+    # 等待余额支付页面加载
+    write_log("waiting for pay page load")
+    time.sleep(float(config.get("pay_page_load_seconds", 2.5)))
 
-    click_target(
-        config,
-        name="pay_confirm",
-        point_key="pay_confirm_point",
-        template_key="pay_confirm_image",
-        region_key="pay_confirm_region",
-        delay_seconds=delay,
-        required=False,
-    )
+    # 2. 点击「开始充电」- 直接用窗口相对坐标
+    start_charge_x = win_left2 + int(config.get("start_charge_offset_x", 366))
+    start_charge_y = win_top2 + int(config.get("start_charge_offset_y", 930))
+    write_log(f"click start_charge (window-relative) at ({start_charge_x},{start_charge_y})")
+    pyautogui.click(start_charge_x, start_charge_y)
+    time.sleep(delay)
 
     if manual_confirm_seconds > 0:
         write_log(f"waiting {manual_confirm_seconds}s for manual payment confirmation")
