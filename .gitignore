@@ -33,11 +33,16 @@ runtime/runner_screenshots/
 
 # Local configs / secrets (commit *.example.json instead)
 config/cloud_agent_config.json
+config/charge_api_config.json
 config/pythonanywhere_secrets.json
 config/pythonanywhere_sync_config.json
 config/wechat_rpa_config.json
 
 # Accidental scratch files
+all.py
+springai-homework-master.zip
+~$*.docx
+~*.tmp
 None
 str
 dict\[str*

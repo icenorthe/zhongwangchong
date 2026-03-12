@@ -5,6 +5,8 @@
   "domain": "icenorth.pythonanywhere.com",
   "remote_project_path": "/home/icenorth/zhongwang-charge",
   "files": [
+    "pythonanywhere_app.py",
+    "mobile_charge_server.py",
     "services/mobile_charge_server.py",
     "services/pythonanywhere_app.py",
     "services/project_paths.py",

@@ -1,0 +1,9 @@
+name = "zhongwang-payment-bridge"
+main = "src/index.mjs"
+compatibility_date = "2025-01-15"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+PAYMENT_PROVIDER = "codepay_legacy"
+RETURN_URL = "https://icenorth.pythonanywhere.com/"
+

@@ -1,981 +1,143 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>中网充下单</title>
   <style>
-    :root {
-      --bg: #eef2f7;
-      --card: #ffffff;
-      --text: #111827;
-      --muted: #6b7280;
-      --border: #e5e7eb;
-      --primary: #101010;
-      --primary-hover: #000000;
-      --soft: #f8fafc;
-      --ok: #166534;
-      --fail: #b91c1c;
-      --pending: #92400e;
-      --shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
-      --radius: 16px;
-    }
-
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      min-height: 100vh;
-      font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", sans-serif;
-      background:
-        radial-gradient(circle at top left, rgba(148, 163, 184, 0.16), transparent 30%),
-        linear-gradient(180deg, #edf2f7 0%, #f5f7fb 45%, #eef2f7 100%);
-      color: var(--text);
-      padding: 14px;
-      display: grid;
-      place-items: center;
-    }
-
-    .shell {
-      width: min(100%, 760px);
-      background: var(--card);
-      border-radius: var(--radius);
-      border: 1px solid var(--border);
-      box-shadow: var(--shadow);
-      overflow: hidden;
-    }
-
-    .hero {
-      padding: 22px 22px 14px;
-      background:
-        linear-gradient(135deg, rgba(15, 23, 42, 0.03), rgba(148, 163, 184, 0.08)),
-        #fff;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .hero h1 {
-      margin: 0 0 6px;
-      font-size: 32px;
-      letter-spacing: 0.02em;
-    }
-
-    .hero p {
-      margin: 0;
-      color: var(--muted);
-      font-size: 14px;
-    }
-
-    .body {
-      padding: 18px;
-    }
-
-    .hidden {
-      display: none !important;
-    }
-
-    .tabs {
-      display: inline-grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 6px;
-      padding: 6px;
-      background: var(--soft);
-      border-radius: 999px;
-      margin-bottom: 16px;
-    }
-
-    .tab-btn {
-      border: none;
-      background: transparent;
-      border-radius: 999px;
-      padding: 10px 14px;
-      font-size: 14px;
-      cursor: pointer;
-      color: var(--muted);
-    }
-
-    .tab-btn.active {
-      background: #fff;
-      color: var(--text);
-      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.08);
-      font-weight: 700;
-    }
-
-    .panel {
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 16px;
-      background: #fff;
-    }
-
-    .field {
-      margin-bottom: 12px;
-    }
-
-    label {
-      display: block;
-      margin-bottom: 6px;
-      font-size: 13px;
-      color: var(--muted);
-    }
-
-    input,
-    select,
-    textarea,
-    button {
-      width: 100%;
-      border-radius: 12px;
-      border: 1px solid var(--border);
-      background: #fff;
-      font-size: 15px;
-      padding: 11px 12px;
-    }
-
-    textarea {
-      resize: vertical;
-      min-height: 88px;
-    }
-
-    button {
-      cursor: pointer;
-      border: none;
-      background: var(--primary);
-      color: #fff;
-      font-weight: 700;
-    }
-
-    button:hover {
-      background: var(--primary-hover);
-    }
-
-    button:disabled {
-      cursor: not-allowed;
-      background: #9ca3af;
-      color: #f8fafc;
-    }
-
-    button.secondary {
-      background: #fff;
-      color: var(--text);
-      border: 1px solid var(--border);
-    }
-
-    .inline {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
-
-    .topbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      margin-bottom: 16px;
-      flex-wrap: wrap;
-    }
-
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 10px;
-      border-radius: 999px;
-      border: 1px solid var(--border);
-      background: var(--soft);
-      color: var(--muted);
-      font-size: 13px;
-    }
-
-    .section-tabs {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 8px;
-      margin-bottom: 14px;
-    }
-
-    .section-btn {
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      background: #fff;
-      color: var(--muted);
-      padding: 11px 12px;
-      font-size: 14px;
-    }
-
-    .section-btn.active {
-      background: #111827;
-      color: #fff;
-      border-color: #111827;
-    }
-
-    .station-card {
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      background: var(--soft);
-      padding: 14px;
-      margin-bottom: 12px;
-    }
-
-    .station-name {
-      font-size: 18px;
-      font-weight: 700;
-      margin: 0 0 8px;
-    }
-
-    .station-meta {
-      color: var(--muted);
-      font-size: 13px;
-      line-height: 1.6;
-    }
-
-    .station-actions {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      flex-wrap: wrap;
-      margin-bottom: 12px;
-    }
-
-    .money-grid {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 10px;
-    }
-
-    .money-item {
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 12px;
-      position: relative;
-      cursor: pointer;
-      background: #fff;
-      min-height: 90px;
-    }
-
-    .money-item input {
-      position: absolute;
-      opacity: 0;
-      pointer-events: none;
-    }
-
-    .money-item strong {
-      display: block;
-      font-size: 22px;
-      margin-bottom: 6px;
-    }
-
-    .money-item span {
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.4;
-    }
-
-    .money-item:has(input:checked) {
-      border-color: #111827;
-      background: #f8fafc;
-      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
-    }
-
-    .status-box {
-      margin-top: 14px;
-      padding: 12px;
-      border-radius: 12px;
-      border: 1px solid var(--border);
-      background: var(--soft);
-      font-size: 14px;
-      word-break: break-word;
-    }
-
-    .ok { color: var(--ok); }
-    .fail { color: var(--fail); }
-    .pending { color: var(--pending); }
-
-    .orders {
-      display: grid;
-      gap: 10px;
-    }
-
-    .order-item {
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 14px;
-      background: #fff;
-    }
-
-    .order-item h3 {
-      margin: 0 0 8px;
-      font-size: 17px;
-    }
-
-    .order-item p {
-      margin: 4px 0;
-      font-size: 13px;
-      color: var(--muted);
-    }
-
-    .order-status {
-      display: inline-block;
-      margin-top: 10px;
-      border-radius: 999px;
-      padding: 5px 10px;
-      border: 1px solid var(--border);
-      font-size: 12px;
-      font-weight: 700;
-    }
-
-    .SUCCESS { color: var(--ok); background: #f0fdf4; border-color: #86efac; }
-    .FAILED { color: var(--fail); background: #fef2f2; border-color: #fecaca; }
-    .PENDING { color: var(--pending); background: #fffbeb; border-color: #fde68a; }
-    .PROCESSING { color: #1d4ed8; background: #eff6ff; border-color: #bfdbfe; }
-
-    @media (max-width: 720px) {
-      .inline,
-      .money-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .hero h1 {
-        font-size: 28px;
-      }
-    }
+    :root{--bg:#eef2f7;--card:#fff;--panel:#fbfbfc;--text:#111827;--muted:#6b7280;--border:#e5e7eb;--primary:#0b0b0d;--ok:#166534;--fail:#b91c1c;--pending:#92400e;--processing:#1d4ed8;--shadow:0 16px 40px rgba(15,23,42,.08);--radius:18px}
+    *{box-sizing:border-box} body{margin:0;min-height:100vh;font-family:"Microsoft YaHei","PingFang SC","Noto Sans SC",sans-serif;background:radial-gradient(circle at top left,rgba(148,163,184,.14),transparent 28%),linear-gradient(180deg,#eef2f7 0%,#f2f5fa 45%,#eef2f7 100%);color:var(--text);padding:18px 12px;display:grid;place-items:center}
+    .shell{width:min(100%,860px);background:var(--card);border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow);overflow:hidden}
+    .hero{padding:28px 28px 18px;border-bottom:1px solid var(--border);background:linear-gradient(180deg,rgba(255,255,255,.96),rgba(248,250,252,.92))}
+    .hero h1{margin:0 0 8px;font-size:clamp(28px,4vw,36px)} .hero p{margin:0;color:var(--muted);font-size:14px;line-height:1.6}
+    .body{padding:18px;display:grid;gap:14px} .panel{border:1px solid var(--border);border-radius:16px;padding:16px;background:var(--panel)} .hidden{display:none!important}
+    .tabs{display:inline-grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:6px;border-radius:999px;background:#f1f3f7;margin-bottom:16px}
+    .tab-btn,.page-btn,.amount-btn,button{cursor:pointer}
+    .tab-btn{border:none;background:transparent;border-radius:999px;padding:10px 22px;font-size:14px;font-weight:700;color:var(--muted)} .tab-btn.active{background:#fff;color:var(--text);box-shadow:0 4px 16px rgba(15,23,42,.08)}
+    .field{margin-bottom:14px}.field:last-child{margin-bottom:0} label{display:block;margin-bottom:7px;color:var(--muted);font-size:13px;font-weight:600}
+    input,select,button{width:100%;border-radius:14px;border:1px solid var(--border);background:#fff;font-size:15px;padding:12px 14px;color:var(--text)} input:focus,select:focus{outline:none;border-color:#c7ced9;box-shadow:0 0 0 3px rgba(148,163,184,.18)}
+    button{border:none;background:var(--primary);color:#fff;font-weight:700} button.secondary{border:1px solid var(--border);background:#fff;color:var(--text)} button:disabled{cursor:not-allowed;background:#9ca3af;color:#f8fafc}
+    .status-box{border:1px solid var(--border);border-radius:14px;background:#fff;padding:12px 14px;font-size:14px;line-height:1.6;word-break:break-word}.ok{color:var(--ok)}.fail{color:var(--fail)}.pending{color:var(--pending)}
+    .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.badge{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;border:1px solid var(--border);background:#fff;color:var(--muted);font-size:13px}
+    .page-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.page-btn{border:1px solid var(--border);border-radius:14px;background:#fff;padding:12px 10px;color:var(--muted);font-size:14px;font-weight:700}.page-btn.active{background:#111827;color:#fff;border-color:#111827}
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.station-card,.order-item,.recharge-item,.empty,.qr-wrap{border:1px solid var(--border);border-radius:16px;background:#fff;padding:14px}
+    .station-card h3,.order-item h3,.recharge-item h3{margin:0 0 8px;font-size:17px}.station-card p,.order-item p,.recharge-item p,.hint{margin:4px 0;color:var(--muted);font-size:13px;line-height:1.55}
+    .amount-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.amount-btn{text-align:left;border:1px solid var(--border);border-radius:16px;background:#fff;padding:14px 12px;color:var(--text)}.amount-btn strong{display:block;font-size:24px;margin-bottom:6px;color:var(--text)}.amount-btn span{color:var(--muted);font-size:12px;line-height:1.5}.amount-btn.active{border-color:#111827;background:#f9fafb;box-shadow:0 10px 22px rgba(15,23,42,.08)}
+    .order-list,.recharge-list{display:grid;gap:10px}.order-status,.recharge-status{display:inline-block;margin-top:10px;border-radius:999px;padding:5px 10px;border:1px solid var(--border);font-size:12px;font-weight:700}
+    .SUCCESS,.APPROVED{color:var(--ok);background:#f0fdf4;border-color:#86efac}.FAILED,.REJECTED{color:var(--fail);background:#fef2f2;border-color:#fecaca}.PENDING{color:var(--pending);background:#fffbeb;border-color:#fde68a}.PROCESSING{color:var(--processing);background:#eff6ff;border-color:#bfdbfe}
+    .qr-wrap{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:center}.qr-wrap img{width:132px;height:132px;object-fit:cover;border-radius:12px;border:1px solid var(--border);background:#fff}
+    @media (max-width:760px){body{padding:10px}.hero,.body{padding:16px}.grid-2,.amount-grid,.page-tabs,.qr-wrap{grid-template-columns:1fr}.qr-wrap img{margin:0 auto}}
   </style>
 </head>
 <body>
   <main class="shell">
-    <section class="hero">
-      <h1>充电代下单</h1>
-      <p>先登录，再选站点、插座和金额。每个用户只能查看自己的订单。</p>
-    </section>
-
+    <section class="hero"><h1>自助充电服务</h1><p>注册登录后，选择区域、站点、插座和金额。</p></section>
     <section class="body">
-      <div id="service-status-banner" class="status-box pending" style="margin-bottom:16px;">正在检查接单状态...</div>
-      <section id="auth-section">
-        <div class="panel">
-          <div class="tabs">
-            <button class="tab-btn active" data-auth-tab="login" type="button">登录</button>
-            <button class="tab-btn" data-auth-tab="register" type="button">注册</button>
-          </div>
-
-          <form id="login-form">
-            <div class="field">
-              <label for="login-phone">手机号</label>
-              <input id="login-phone" name="phone" placeholder="请输入手机号" autocomplete="username">
-            </div>
-            <div class="field">
-              <label for="login-password">密码</label>
-              <input id="login-password" name="password" type="password" placeholder="至少 6 位" autocomplete="current-password">
-            </div>
-            <button type="submit">登录并进入下单页</button>
-          </form>
-
-          <form id="register-form" class="hidden">
-            <div class="field">
-              <label for="register-phone">手机号</label>
-              <input id="register-phone" name="phone" placeholder="请输入手机号" autocomplete="username">
-            </div>
-            <div class="field">
-              <label for="register-password">密码</label>
-              <input id="register-password" name="password" type="password" placeholder="至少 6 位" autocomplete="new-password">
-            </div>
-            <div class="field">
-              <label for="register-password-confirm">确认密码</label>
-              <input id="register-password-confirm" name="password_confirm" type="password" placeholder="再次输入密码" autocomplete="new-password">
-            </div>
-            <button type="submit">注册并自动登录</button>
-          </form>
-
-          <div id="auth-status" class="status-box">请先登录后再下单。</div>
-        </div>
+      <section id="auth-section" class="panel">
+        <div class="tabs"><button class="tab-btn active" data-auth-tab="login" type="button">登录</button><button class="tab-btn" data-auth-tab="register" type="button">注册</button></div>
+        <form id="login-form">
+          <div class="field"><label for="login-phone">手机号</label><input id="login-phone" maxlength="11" inputmode="numeric" placeholder="请输入11位手机号" autocomplete="username"></div>
+          <div class="field"><label for="login-password">密码</label><input id="login-password" type="password" placeholder="至少 6 位" autocomplete="current-password"></div>
+          <button type="submit">登录并进入下单页</button>
+        </form>
+        <form id="register-form" class="hidden">
+          <div class="field"><label for="register-phone">手机号</label><input id="register-phone" maxlength="11" inputmode="numeric" placeholder="请输入11位手机号" autocomplete="username"></div>
+          <div class="field"><label for="register-password">密码</label><input id="register-password" type="password" placeholder="至少 6 位" autocomplete="new-password"></div>
+          <div class="field"><label for="register-password-confirm">确认密码</label><input id="register-password-confirm" type="password" placeholder="再次输入密码" autocomplete="new-password"></div>
+          <button type="submit">注册并自动登录</button>
+        </form>
+        <div id="auth-status" class="status-box">请先登录后再下单。</div>
       </section>
 
       <section id="app-section" class="hidden">
-        <div class="topbar">
-          <div class="badge">
-            当前账号：<strong id="user-phone">-</strong>
-            <span style="margin-left:8px;">余额：<strong id="user-balance">0.00</strong></span>
+        <div id="service-status-banner" class="status-box pending">正在检查接单状态...</div>
+        <div class="panel topbar"><div class="badge">当前账号：<strong id="user-phone">-</strong><span>余额：<strong id="user-balance">0.00</strong></span></div><button id="logout-btn" class="secondary" type="button" style="width:auto">退出登录</button></div>
+        <div class="page-tabs"><button class="page-btn active" data-page="order" type="button">立即下单</button><button class="page-btn" data-page="orders" type="button">我的订单</button><button class="page-btn" data-page="status" type="button">站点状态</button><button class="page-btn" data-page="recharge" type="button">余额充值</button></div>
+
+        <section id="page-order" class="panel">
+          <div class="grid-2">
+            <div class="field"><label for="region-select">选择区域</label><select id="region-select"></select></div>
+            <div class="field"><label for="station-select">选择站点</label><select id="station-select"></select></div>
           </div>
-          <button id="logout-btn" class="secondary" type="button" style="width:auto;">退出登录</button>
-        </div>
-
-        <div class="section-tabs">
-          <button class="section-btn active" data-page="order" type="button">立即下单</button>
-          <button class="section-btn" data-page="orders" type="button">我的订单</button>
-        </div>
-
-        <section id="page-order">
-          <div class="panel">
-            <div class="field">
-              <label for="station-search">搜索站点</label>
-              <input id="station-search" placeholder="输入站点名称或设备编码搜索">
-            </div>
-
-            <div class="field">
-              <label for="station-select">选择站点</label>
-              <select id="station-select"></select>
-            </div>
-
-            <div id="station-card" class="station-card hidden">
-              <p class="station-name" id="station-name">-</p>
-              <div class="station-meta">
-                <div id="station-address">-</div>
-                <div>设备编码：<span id="station-device-code">-</span></div>
-              </div>
-            </div>
-
-            <div class="station-actions">
-              <button id="toggle-manual-btn" class="secondary" type="button" style="width:auto;">手动输入站点</button>
-              <span class="badge">找不到站点时可切换手动输入</span>
-            </div>
-
-            <div id="manual-fields" class="hidden">
-              <div class="field">
-                <label for="station_name">站点名称</label>
-                <input id="station_name" name="station_name" placeholder="例如：29号站成都大学综合楼二号充电区V3.0">
-              </div>
-              <div class="field">
-                <label for="device_code">设备编码</label>
-                <input id="device_code" name="device_code" placeholder="例如：13061856473">
-              </div>
-            </div>
-
-            <div class="inline">
-              <div class="field">
-                <label for="socket_no">插座号</label>
-                <select id="socket_no"></select>
-              </div>
-
-              <div class="field">
-                <label>充值金额</label>
-                <div class="money-grid">
-                  <label class="money-item">
-                    <input type="radio" name="amount_yuan" value="1" checked>
-                    <strong>¥1</strong>
-                    <span>约 207 分钟</span>
-                  </label>
-                  <label class="money-item">
-                    <input type="radio" name="amount_yuan" value="2">
-                    <strong>¥2</strong>
-                    <span>约 414 分钟</span>
-                  </label>
-                  <label class="money-item">
-                    <input type="radio" name="amount_yuan" value="3">
-                    <strong>¥3</strong>
-                    <span>约 621 分钟</span>
-                  </label>
-                  <label class="money-item">
-                    <input type="radio" name="amount_yuan" value="4">
-                    <strong>¥4</strong>
-                    <span>约 828 分钟</span>
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            <div class="field">
-              <label for="remark">备注（可选）</label>
-              <textarea id="remark" placeholder="例如：2号口靠门"></textarea>
-            </div>
-
-            
-            <div id="payment-token-field" class="field hidden">
-              <label for="payment_token">Payment token</label>
-              <div id="payment-qr-wrap" style="margin:10px 0 8px;display:none;">
-                <div style="color:#6b7280;font-size:12px;margin-bottom:6px;">WeChat personal collection</div>
-                <img id="payment-qr-img" alt="WeChat QR" style="width:220px;max-width:100%;border-radius:12px;border:1px solid #e5e7eb;">
-              </div>
-              <input id="payment_token" placeholder="Paste payment token">
-              <div style="margin-top:6px;color:#6b7280;font-size:12px;">Token mode: ask admin for a code before ordering.</div>
-            </div>
-
-            <button id="submit-order-btn" type="button">立即下单充电</button>
-            <div id="order-status" class="status-box">等待下单...</div>
+          <div id="station-card" class="station-card hidden"><h3 id="station-name">-</h3><p id="station-address">-</p><p>设备编码：<span id="station-device-code">-</span></p><p>可选插座：<span id="station-socket-summary">-</span></p></div>
+          <div class="grid-2">
+            <div class="field"><label for="socket-select">插座号</label><select id="socket-select"></select><div id="socket-tip" class="hint hidden"></div></div>
+            <div class="field"><label>充电金额</label><div id="amount-grid" class="amount-grid"></div><div class="hint" style="margin-top:8px;">每笔订单额外收取 1 元服务费。</div></div>
           </div>
+          <button id="submit-order-btn" type="button">立即下单充电</button>
+          <div id="order-status" class="status-box">等待下单...</div>
         </section>
 
-        <section id="page-orders" class="hidden">
-          <div class="panel">
-            <div class="topbar" style="margin-bottom:14px;">
-              <div>
-                <h2 style="margin:0;font-size:24px;">我的订单</h2>
-                <p style="margin:4px 0 0;">这里只展示当前登录账号自己的订单。</p>
-              </div>
-              <button id="refresh-orders-btn" class="secondary" type="button" style="width:auto;">刷新订单</button>
-            </div>
-            <div id="my-orders" class="orders"></div>
+        <section id="page-orders" class="panel hidden">
+          <div class="topbar" style="margin-bottom:12px"><div><h2 style="margin:0;font-size:22px">我的订单</h2><p class="hint">展示创建时间、预计结束时间和当前处理结果。</p></div><button id="refresh-orders-btn" class="secondary" type="button" style="width:auto">刷新订单</button></div>
+          <div id="my-orders" class="order-list"></div>
+        </section>
+
+        <section id="page-status" class="panel hidden">
+          <div class="topbar" style="margin-bottom:12px"><div><h2 style="margin:0;font-size:22px">站点状态</h2><p class="hint">当前基于已知订单估算插座状态；如果后面接入实时源，可以再升级成真实状态。</p></div><button id="refresh-socket-overview-btn" class="secondary" type="button" style="width:auto">刷新状态</button></div>
+          <div id="socket-overview" class="order-list"></div>
+        </section>
+
+        <section id="page-recharge" class="panel hidden">
+          <div class="topbar" style="margin-bottom:12px"><div><h2 style="margin:0;font-size:22px">余额充值</h2><p class="hint">联系微信付款，再提交充值申请，管理员确认到账后余额更新，之后可直接使用余额充电。</p></div><button id="refresh-recharge-btn" class="secondary" type="button" style="width:auto">刷新记录</button></div>
+          <div id="recharge-qr-wrap" class="qr-wrap hidden"><img id="recharge-qr-img" alt="收款二维码"><div id="recharge-qr-note" class="hint"></div></div>
+          <div class="grid-2">
+            <div class="field"><label for="recharge-amount">充值金额</label><input id="recharge-amount" type="number" min="1" step="1" placeholder="例如：20"></div>
+            <div class="field"><label for="recharge-note">付款备注</label><input id="recharge-note" maxlength="200" placeholder="例如：微信付款尾号 1234"></div>
           </div>
+          <button id="submit-recharge-btn" type="button">提交充值申请</button>
+          <div id="recharge-status" class="status-box">提交后请等待管理员审核。</div>
+          <div style="margin-top:14px"><h3 style="margin:0 0 10px;font-size:18px">充值记录</h3><div id="my-recharges" class="recharge-list"></div></div>
         </section>
       </section>
     </section>
   </main>
-
   <script>
-    const TOKEN_KEY = "zwc_user_token";
-    const authSection = document.getElementById("auth-section");
-    const appSection = document.getElementById("app-section");
-    const authStatus = document.getElementById("auth-status");
-    const orderStatus = document.getElementById("order-status");
-    const serviceStatusBanner = document.getElementById("service-status-banner");
-    const userPhone = document.getElementById("user-phone");
-    const userBalance = document.getElementById("user-balance");
-    const stationSearch = document.getElementById("station-search");
-    const stationSelect = document.getElementById("station-select");
-    const stationCard = document.getElementById("station-card");
-    const stationName = document.getElementById("station-name");
-    const stationAddress = document.getElementById("station-address");
-    const stationDeviceCode = document.getElementById("station-device-code");
-    const socketSelect = document.getElementById("socket_no");
-    const manualFields = document.getElementById("manual-fields");
-    const stationNameInput = document.getElementById("station_name");
-    const deviceCodeInput = document.getElementById("device_code");
-    const myOrders = document.getElementById("my-orders");
-    const toggleManualBtn = document.getElementById("toggle-manual-btn");
-    const submitOrderBtn = document.getElementById("submit-order-btn");
-    const paymentTokenField = document.getElementById("payment-token-field");
-    const paymentTokenInput = document.getElementById("payment_token");
-    const paymentQrWrap = document.getElementById("payment-qr-wrap");
-    const paymentQrImg = document.getElementById("payment-qr-img");
-
-    const state = {
-      token: localStorage.getItem(TOKEN_KEY) || "",
-      user: null,
-      stations: [],
-      selectedStation: null,
-      manualMode: false,
-      pollTimer: null,
-      serviceTimer: null,
-      serviceStatus: null,
-      currentPage: "order",
-      currentAuthTab: "login",
-    };
-
-    function setBox(box, text, klass = "") {
-      box.className = `status-box ${klass}`.trim();
-      box.textContent = text;
-    }
-
-    function authHeaders() {
-      return state.token ? { Authorization: `Bearer ${state.token}` } : {};
-    }
-
-    async function requestJson(url, options = {}) {
-      const headers = { ...(options.headers || {}), ...authHeaders() };
-      const response = await fetch(url, { ...options, headers });
-      const text = await response.text();
-      const data = text ? JSON.parse(text) : {};
-      if (!response.ok) {
-        throw new Error(data.detail || `请求失败: ${response.status}`);
-      }
-      return data;
-    }
-
-    function formatDateTime(value) {
-      if (!value) return "暂无";
-      const date = new Date(value);
-      return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
-    }
-
-    function renderServiceStatus(status) {
-      state.serviceStatus = status;
-      const serviceOnline = Boolean(status.accepting_orders);
-      const forceOnline = Boolean(status.require_agent_online_for_orders);
-      submitOrderBtn.disabled = !status.allow_order_submission;
-      const paymentMode = String(status.payment_mode || "disabled").toLowerCase();
-      if (paymentTokenField) {
-        const showToken = paymentMode === "token";
-        paymentTokenField.classList.toggle("hidden", !showToken);
-        if (paymentQrWrap) {
-          const url = String(status.payment_qr_url || "");
-          const showQr = Boolean(url);
-          paymentQrWrap.style.display = showQr ? "block" : "none";
-          if (showQr && paymentQrImg) paymentQrImg.src = url;
-        }
-        if (!showToken && paymentTokenInput) paymentTokenInput.value = "";
-      }
-
-      if (status.service_mode === "cloud_agent") {
-        if (serviceOnline) {
-          setBox(
-            serviceStatusBanner,
-            `电脑接单服务在线，可立即下单。最近心跳：${formatDateTime(status.agent_last_seen_at)}`,
-            "ok",
-          );
-          return;
-        }
-
-        const suffix = forceOnline ? "已暂停新订单提交。" : "现在下单会先排队，待电脑上线后继续处理。";
-        setBox(
-          serviceStatusBanner,
-          `电脑接单服务离线。最近心跳：${formatDateTime(status.agent_last_seen_at)}。${suffix}`,
-          forceOnline ? "fail" : "pending",
-        );
-        return;
-      }
-
-      if (serviceOnline) {
-        setBox(serviceStatusBanner, "本地执行服务在线，可立即下单。", "ok");
-      } else {
-        const suffix = forceOnline ? "当前不接受新订单。" : "订单会等待服务恢复后处理。";
-        setBox(serviceStatusBanner, `本地执行服务未就绪。${suffix}`, forceOnline ? "fail" : "pending");
-      }
-    }
-
-    async function loadServiceStatus() {
-      try {
-        const status = await requestJson("/api/health");
-        renderServiceStatus(status);
-      } catch (error) {
-        state.serviceStatus = null;
-        submitOrderBtn.disabled = false;
-        setBox(serviceStatusBanner, `接单状态获取失败：${error.message}`, "fail");
-      }
-    }
-
-    function switchAuthTab(name) {
-      state.currentAuthTab = name;
-      document.querySelectorAll("[data-auth-tab]").forEach((button) => {
-        button.classList.toggle("active", button.dataset.authTab === name);
-      });
-      document.getElementById("login-form").classList.toggle("hidden", name !== "login");
-      document.getElementById("register-form").classList.toggle("hidden", name !== "register");
-    }
-
-    function switchPage(name) {
-      state.currentPage = name;
-      document.querySelectorAll("[data-page]").forEach((button) => {
-        button.classList.toggle("active", button.dataset.page === name);
-      });
-      document.getElementById("page-order").classList.toggle("hidden", name !== "order");
-      document.getElementById("page-orders").classList.toggle("hidden", name !== "orders");
-      if (name === "orders") {
-        loadMyOrders();
-      }
-    }
-
-    function setLoggedIn(user, token) {
-      state.user = user;
-      state.token = token;
-      localStorage.setItem(TOKEN_KEY, token);
-      userPhone.textContent = user.phone;
-      if (userBalance) userBalance.textContent = Number(user.balance_yuan || 0).toFixed(2);
-      authSection.classList.add("hidden");
-      appSection.classList.remove("hidden");
-    }
-
-    function clearLoginState() {
-      state.user = null;
-      state.token = "";
-      localStorage.removeItem(TOKEN_KEY);
-      if (userBalance) userBalance.textContent = "0.00";
-      if (paymentTokenInput) paymentTokenInput.value = "";
-      authSection.classList.remove("hidden");
-      appSection.classList.add("hidden");
-      setBox(authStatus, "请先登录后再下单。");
-      setBox(orderStatus, "等待下单...");
-    }
-
-    function renderStationOptions(stations) {
-      stationSelect.innerHTML = "";
-      if (!stations.length) {
-        const option = document.createElement("option");
-        option.value = "";
-        option.textContent = "没有匹配站点，请切换手动输入";
-        stationSelect.appendChild(option);
-        state.selectedStation = null;
-        stationCard.classList.add("hidden");
-        return;
-      }
-
-      stations.forEach((station) => {
-        const option = document.createElement("option");
-        option.value = station.id;
-        option.textContent = `${station.name} (${station.device_code})`;
-        stationSelect.appendChild(option);
-      });
-
-      if (!state.selectedStation || !stations.some((item) => item.id === state.selectedStation.id)) {
-        state.selectedStation = stations[0];
-      } else {
-        state.selectedStation = stations.find((item) => item.id === state.selectedStation.id);
-      }
-      stationSelect.value = state.selectedStation.id;
-      renderSelectedStation();
-    }
-
-    function initSocketOptions(count) {
-      const target = Math.max(1, Math.min(Number(count) || 10, 20));
-      const previous = socketSelect.value || "1";
-      socketSelect.innerHTML = "";
-      for (let i = 1; i <= target; i += 1) {
-        const option = document.createElement("option");
-        option.value = String(i);
-        option.textContent = `${i} 号插座`;
-        socketSelect.appendChild(option);
-      }
-      socketSelect.value = previous <= String(target) ? previous : "1";
-    }
-
-    function renderSelectedStation() {
-      if (!state.selectedStation || state.manualMode) {
-        stationCard.classList.add("hidden");
-        initSocketOptions(10);
-        return;
-      }
-      stationCard.classList.remove("hidden");
-      stationName.textContent = state.selectedStation.name;
-      stationAddress.textContent = state.selectedStation.address || "未填写地址";
-      stationDeviceCode.textContent = state.selectedStation.device_code;
-      initSocketOptions(state.selectedStation.socket_count || 10);
-    }
-
-    async function loadStations(query = "") {
-      const params = new URLSearchParams();
-      if (query.trim()) params.set("q", query.trim());
-      const stations = await requestJson(`/api/stations?${params.toString()}`);
-      state.stations = stations;
-      renderStationOptions(stations);
-      if (!stations.length) {
-        state.manualMode = true;
-        manualFields.classList.remove("hidden");
-        toggleManualBtn.textContent = "使用站点列表";
-      }
-    }
-
-    function toggleManualMode(forceValue = null) {
-      state.manualMode = forceValue === null ? !state.manualMode : forceValue;
-      manualFields.classList.toggle("hidden", !state.manualMode);
-      toggleManualBtn.textContent = state.manualMode ? "使用站点列表" : "手动输入站点";
-      renderSelectedStation();
-    }
-
-    async function bootstrapAuth() {
-      if (!state.token) return;
-      try {
-        const user = await requestJson("/api/me");
-        setLoggedIn(user, state.token);
-        await loadStations();
-        await loadMyOrders();
-      } catch {
-        clearLoginState();
-      }
-    }
-
-    function startServicePolling() {
-      loadServiceStatus();
-      if (state.serviceTimer) clearInterval(state.serviceTimer);
-      state.serviceTimer = setInterval(loadServiceStatus, 15000);
-    }
-
-    async function submitAuthForm(url, payload, successText) {
-      const data = await requestJson(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      setLoggedIn(data.user, data.token);
-      setBox(authStatus, successText, "ok");
-      await loadStations();
-      await loadMyOrders();
-    }
-
-    async function loadMyOrders() {
-      try {
-        const orders = await requestJson("/api/me/orders?limit=50");
-        if (!orders.length) {
-          myOrders.innerHTML = '<div class="order-item"><p>你还没有订单，先去下一个试试。</p></div>';
-          return;
-        }
-        myOrders.innerHTML = orders.map((order) => `
-          <article class="order-item">
-            <h3>${order.station_name || "未命名站点"}</h3>
-            <p>设备编码：${order.device_code}</p>
-            <p>插座：${order.socket_no} 号 | 金额：¥${Number(order.amount_yuan).toFixed(2)}</p>
-            <p>创建时间：${new Date(order.created_at).toLocaleString()}</p>
-            <p>结果：${order.result_message || "处理中"}</p>
-            <span class="order-status ${order.status}">${order.status}</span>
-          </article>
-        `).join("");
-      } catch (error) {
-        myOrders.innerHTML = `<div class="order-item"><p>加载订单失败：${error.message}</p></div>`;
-      }
-    }
-
-    async function pollOrder(orderId) {
-      if (state.pollTimer) clearInterval(state.pollTimer);
-      state.pollTimer = setInterval(async () => {
-        try {
-          const order = await requestJson(`/api/orders/${orderId}`);
-          setBox(orderStatus, `订单 #${order.id} | 状态：${order.status} | 结果：${order.result_message || "处理中"}`, "pending");
-          if (order.status === "SUCCESS") {
-            clearInterval(state.pollTimer);
-            state.pollTimer = null;
-            setBox(orderStatus, `订单 #${order.id} 成功，平台单号：${order.vendor_order_id || "无"}`, "ok");
-            await loadMyOrders();
-          } else if (order.status === "FAILED") {
-            clearInterval(state.pollTimer);
-            state.pollTimer = null;
-            setBox(orderStatus, `订单 #${order.id} 失败，原因：${order.result_message || "未知"}`, "fail");
-            await loadMyOrders();
-          }
-        } catch (error) {
-          clearInterval(state.pollTimer);
-          state.pollTimer = null;
-          setBox(orderStatus, `轮询失败：${error.message}`, "fail");
-        }
-      }, 3000);
-    }
-
-    async function createOrder() {
-      if (state.serviceStatus && !state.serviceStatus.allow_order_submission) {
-        throw new Error("接单电脑当前离线，暂时无法提交订单");
-      }
-
-      const amountRadio = document.querySelector("input[name='amount_yuan']:checked");
-      const paymentToken = paymentTokenInput ? paymentTokenInput.value.trim() : "";
-      const tokenRequired = state.serviceStatus && String(state.serviceStatus.payment_mode || "").toLowerCase() === "token";
-      if (tokenRequired && !paymentToken) {
-        throw new Error("请先填写支付码");
-      }
-
-      let payload;
-
-      if (state.manualMode) {
-        payload = {
-          station_name: stationNameInput.value.trim(),
-          device_code: deviceCodeInput.value.trim(),
-          socket_no: Number(socketSelect.value),
-          amount_yuan: Number(amountRadio ? amountRadio.value : "1"),
-          remark: document.getElementById("remark").value.trim(),
-          payment_token: paymentToken,
-        };
-      } else {
-        if (!state.selectedStation) {
-          throw new Error("请先选择站点");
-        }
-        payload = {
-          station_name: state.selectedStation.name,
-          device_code: state.selectedStation.device_code,
-          socket_no: Number(socketSelect.value),
-          amount_yuan: Number(amountRadio ? amountRadio.value : "1"),
-          remark: document.getElementById("remark").value.trim(),
-          payment_token: paymentToken,
-        };
-      }
-
-      if (!payload.device_code) {
-        throw new Error("设备编码不能为空");
-      }
-
-      const order = await requestJson("/api/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      setBox(orderStatus, `订单已创建（#${order.id}），正在处理...`, "pending");
-      await loadMyOrders();
-      await pollOrder(order.id);
-    }
-
-    document.querySelectorAll("[data-auth-tab]").forEach((button) => {
-      button.addEventListener("click", () => switchAuthTab(button.dataset.authTab));
-    });
-
-    document.querySelectorAll("[data-page]").forEach((button) => {
-      button.addEventListener("click", () => switchPage(button.dataset.page));
-    });
-
-    document.getElementById("login-form").addEventListener("submit", async (event) => {
-      event.preventDefault();
-      try {
-        await submitAuthForm(
-          "/api/auth/login",
-          {
-            phone: document.getElementById("login-phone").value.trim(),
-            password: document.getElementById("login-password").value,
-          },
-          "登录成功。"
-        );
-      } catch (error) {
-        setBox(authStatus, `登录失败：${error.message}`, "fail");
-      }
-    });
-
-    document.getElementById("register-form").addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const password = document.getElementById("register-password").value;
-      const passwordConfirm = document.getElementById("register-password-confirm").value;
-      if (password !== passwordConfirm) {
-        setBox(authStatus, "两次输入的密码不一致。", "fail");
-        return;
-      }
-
-      try {
-        await submitAuthForm(
-          "/api/auth/register",
-          {
-            phone: document.getElementById("register-phone").value.trim(),
-            password,
-          },
-          "注册成功，已自动登录。"
-        );
-      } catch (error) {
-        setBox(authStatus, `注册失败：${error.message}`, "fail");
-      }
-    });
-
-    document.getElementById("logout-btn").addEventListener("click", async () => {
-      try {
-        await requestJson("/api/auth/logout", { method: "POST" });
-      } catch {
-        // no-op
-      }
-      clearLoginState();
-      switchPage("order");
-    });
-
-    stationSearch.addEventListener("input", async () => {
-      try {
-        await loadStations(stationSearch.value);
-      } catch (error) {
-        setBox(orderStatus, `站点加载失败：${error.message}`, "fail");
-      }
-    });
-
-    stationSelect.addEventListener("change", () => {
-      state.selectedStation = state.stations.find((item) => item.id === stationSelect.value) || null;
-      renderSelectedStation();
-    });
-
-    toggleManualBtn.addEventListener("click", () => {
-      const nextValue = !state.manualMode;
-      toggleManualMode(nextValue);
-      if (!nextValue && state.stations.length) {
-        renderSelectedStation();
-      }
-    });
-
-    document.getElementById("submit-order-btn").addEventListener("click", async () => {
-      try {
-        await createOrder();
-      } catch (error) {
-        setBox(orderStatus, `提交失败：${error.message}`, "fail");
-      }
-    });
-
-    document.getElementById("refresh-orders-btn").addEventListener("click", loadMyOrders);
-
-    switchAuthTab("login");
-    switchPage("order");
-    initSocketOptions(10);
-    startServicePolling();
-    bootstrapAuth();
+    const TOKEN_KEY="zwc_user_token",LEGACY_TOKEN_KEY="token";
+    const AMOUNTS=[{yuan:1,minutes:207},{yuan:2,minutes:414},{yuan:3,minutes:621},{yuan:4,minutes:828}];
+    const els={authSection:document.getElementById("auth-section"),appSection:document.getElementById("app-section"),authStatus:document.getElementById("auth-status"),orderStatus:document.getElementById("order-status"),serviceStatus:document.getElementById("service-status-banner"),userPhone:document.getElementById("user-phone"),userBalance:document.getElementById("user-balance"),regionSelect:document.getElementById("region-select"),stationSelect:document.getElementById("station-select"),stationCard:document.getElementById("station-card"),stationName:document.getElementById("station-name"),stationAddress:document.getElementById("station-address"),stationDeviceCode:document.getElementById("station-device-code"),stationSocketSummary:document.getElementById("station-socket-summary"),socketSelect:document.getElementById("socket-select"),socketTip:document.getElementById("socket-tip"),amountGrid:document.getElementById("amount-grid"),submitOrderBtn:document.getElementById("submit-order-btn"),myOrders:document.getElementById("my-orders"),socketOverview:document.getElementById("socket-overview"),rechargeStatus:document.getElementById("recharge-status"),rechargeAmount:document.getElementById("recharge-amount"),rechargeNote:document.getElementById("recharge-note"),rechargeQrWrap:document.getElementById("recharge-qr-wrap"),rechargeQrImg:document.getElementById("recharge-qr-img"),rechargeQrNote:document.getElementById("recharge-qr-note"),submitRechargeBtn:document.getElementById("submit-recharge-btn"),myRecharges:document.getElementById("my-recharges")};
+    const state={token:localStorage.getItem(TOKEN_KEY)||localStorage.getItem(LEGACY_TOKEN_KEY)||"",user:null,stations:[],selectedRegion:"",selectedStation:null,selectedAmount:1,serviceInfo:null,paymentBridgeUrl:"",pollTimer:null,serviceTimer:null,rechargePollTimer:null};
+    const setBox=(node,text,extra="")=>{node.className=`status-box ${extra}`.trim();node.textContent=text};
+    const headers=()=>state.token?{Authorization:`Bearer ${state.token}`}:{};
+    async function requestJson(url,options={}){const resp=await fetch(url,{...options,headers:{...(options.headers||{}),...headers()}});const text=await resp.text();const data=text?JSON.parse(text):{};if(!resp.ok)throw new Error(data.detail||`请求失败：${resp.status}`);return data}
+    const fmt=(value)=>{if(!value)return"暂无";const d=new Date(value);return Number.isNaN(d.getTime())?value:d.toLocaleString()};
+    const statusClass=(status)=>String(status||"").toUpperCase()||"PENDING";
+    const statusLabel=(status)=>({SUCCESS:"成功",FAILED:"失败",PENDING:"待处理",PROCESSING:"处理中",APPROVED:"已通过",REJECTED:"已驳回"})[statusClass(status)]||String(status||"-");
+    function renderAmountButtons(){els.amountGrid.innerHTML="";AMOUNTS.forEach((item)=>{const btn=document.createElement("button");btn.type="button";btn.className=`amount-btn${state.selectedAmount===item.yuan?" active":""}`;btn.innerHTML=`<strong>¥${item.yuan}</strong><span>约 ${item.minutes} 分钟</span>`;btn.onclick=()=>{state.selectedAmount=item.yuan;renderAmountButtons()};els.amountGrid.appendChild(btn)})}
+    function regionStations(){return state.stations.filter((x)=>x.region===state.selectedRegion)}
+    function renderRegions(){const regions=[...new Set(state.stations.map((x)=>x.region).filter(Boolean))];state.selectedRegion=regions.includes(state.selectedRegion)?state.selectedRegion:(regions[0]||"");els.regionSelect.innerHTML=regions.map((x)=>`<option value="${x}">${x}</option>`).join("");els.regionSelect.value=state.selectedRegion;renderStations()}
+    function renderStations(){const list=regionStations();if(!list.length){els.stationSelect.innerHTML='<option value="">当前区域暂无站点</option>';state.selectedStation=null;renderSelectedStation();return}state.selectedStation=list.find((x)=>x.id===els.stationSelect.value)||list[0];els.stationSelect.innerHTML=list.map((x)=>`<option value="${x.id}">${x.name}</option>`).join("");els.stationSelect.value=state.selectedStation.id;renderSelectedStation()}
+    function renderSelectedStation(){if(!state.selectedStation){els.stationCard.classList.add("hidden");els.socketSelect.innerHTML='<option value="">暂无可用插座</option>';els.socketTip.classList.add("hidden");return}const disabled=new Set((state.selectedStation.disabled_sockets||[]).map(Number));els.stationCard.classList.remove("hidden");els.stationName.textContent=state.selectedStation.name;els.stationAddress.textContent=state.selectedStation.address||"未填写地址";els.stationDeviceCode.textContent=state.selectedStation.device_code;els.stationSocketSummary.textContent=disabled.size?`共 ${state.selectedStation.socket_count} 个，故障 ${disabled.size} 个`:`共 ${state.selectedStation.socket_count} 个，目前未标记故障`;els.socketSelect.innerHTML=Array.from({length:Number(state.selectedStation.socket_count||10)},(_,i)=>{const no=i+1;return`<option value="${no}" ${disabled.has(no)?"disabled":""}>${no}号插座${disabled.has(no)?"（故障）":""}</option>`}).join("");const first=[...els.socketSelect.options].find((x)=>!x.disabled);if(first)els.socketSelect.value=first.value;renderSocketTip()}
+    function renderSocketTip(){if(!state.selectedStation)return;const disabled=(state.selectedStation.disabled_sockets||[]).length;if(disabled){els.socketTip.textContent=`该站点有 ${disabled} 个故障插座，列表中已自动标记。`;els.socketTip.classList.remove("hidden")}else els.socketTip.classList.add("hidden")}
+    function renderServiceStatus(info){state.serviceInfo=info;state.paymentBridgeUrl=String(info.payment_bridge_url||"").trim();if(info.accepting_orders)setBox(els.serviceStatus,`自助充电服务在线，可立即下单。最近心跳：${fmt(info.agent_last_seen_at)}`,"ok");else setBox(els.serviceStatus,`电脑接单服务离线。最近心跳：${fmt(info.agent_last_seen_at)}。${info.require_agent_online_for_orders?"当前暂停新订单提交。":"现在下单会先排队，待电脑上线后继续处理。"}`,info.require_agent_online_for_orders?"fail":"pending");els.submitOrderBtn.disabled=!info.allow_order_submission;els.submitRechargeBtn.textContent=state.paymentBridgeUrl?"创建充值支付":"提交充值申请";const qr=String(info.payment_qr_url||"");if(qr&&!state.paymentBridgeUrl){els.rechargeQrWrap.classList.remove("hidden");els.rechargeQrImg.src=qr;els.rechargeQrNote.textContent=info.recharge_qr_note||"线下付款后提交充值申请，管理员确认到账后补余额。"}else if(!state.paymentBridgeUrl){els.rechargeQrWrap.classList.add("hidden")}}
+    async function loadServiceStatus(){try{renderServiceStatus(await requestJson("/api/health"))}catch(err){state.serviceInfo=null;els.submitOrderBtn.disabled=false;setBox(els.serviceStatus,`接单状态获取失败：${err.message}`,"fail")}}
+    async function loadStations(){state.stations=await requestJson("/api/stations");renderRegions()}
+    function setLoggedIn(user,token){state.user=user;state.token=token;localStorage.setItem(TOKEN_KEY,token);localStorage.setItem(LEGACY_TOKEN_KEY,token);els.userPhone.textContent=user.phone;els.userBalance.textContent=Number(user.balance_yuan||0).toFixed(2);els.authSection.classList.add("hidden");els.appSection.classList.remove("hidden")}
+    function clearLoginState(){state.user=null;state.token="";localStorage.removeItem(TOKEN_KEY);localStorage.removeItem(LEGACY_TOKEN_KEY);els.authSection.classList.remove("hidden");els.appSection.classList.add("hidden");els.userBalance.textContent="0.00";setBox(els.authStatus,"请先登录后再下单。");setBox(els.orderStatus,"等待下单...");setBox(els.rechargeStatus,"提交后请等待管理员审核。")}
+    async function bootstrapAuth(){if(!state.token)return;try{const user=await requestJson("/api/me");setLoggedIn(user,state.token);await Promise.all([loadStations(),loadMyOrders(),loadMyRecharges()])}catch{clearLoginState()}}
+    async function createOrder(){if(!state.selectedStation)throw new Error("请先选择站点");if(state.serviceInfo&&!state.serviceInfo.allow_order_submission)throw new Error("接单电脑当前离线，暂时无法下单");const opt=els.socketSelect.selectedOptions[0];if(!opt||opt.disabled)throw new Error("当前插座已标记故障，请换一个插座");const total=(Number(state.selectedAmount)+1).toFixed(2);if(!window.confirm(`确认下单？\\n站点：${state.selectedStation.name}\\n插座：${els.socketSelect.value}号\\n充电金额：¥${Number(state.selectedAmount).toFixed(2)}\\n服务费：¥1.00\\n本次合计扣费：¥${total}`))return;const order=await requestJson("/api/orders",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({station_id:state.selectedStation.id,station_name:state.selectedStation.name,device_code:state.selectedStation.device_code,socket_no:Number(els.socketSelect.value),amount_yuan:state.selectedAmount,remark:"",payment_token:""})});setBox(els.orderStatus,`订单已创建（#${order.id}），正在处理...`,"pending");await loadMyOrders();pollOrder(order.id)}
+    function pollOrder(id){clearInterval(state.pollTimer);state.pollTimer=setInterval(async()=>{try{const order=await requestJson(`/api/orders/${id}`);setBox(els.orderStatus,`订单 #${order.id} | 状态：${order.status} | 结果：${order.result_message||"处理中"}`,"pending");if(order.status==="SUCCESS"||order.status==="FAILED"){clearInterval(state.pollTimer);state.pollTimer=null;setBox(els.orderStatus,order.status==="SUCCESS"?`订单 #${order.id} 成功，平台单号：${order.vendor_order_id||"无"}`:`订单 #${order.id} 失败，原因：${order.result_message||"未知"}`,order.status==="SUCCESS"?"ok":"fail");await loadMyOrders()}}catch(err){clearInterval(state.pollTimer);state.pollTimer=null;setBox(els.orderStatus,`轮询失败：${err.message}`,"fail")}},3000)}
+    async function loadMyOrders(){try{const rows=await requestJson("/api/me/orders?limit=50");els.myOrders.innerHTML=rows.length?rows.map((o)=>`<article class="order-item"><h3>${o.station_name||"未命名站点"}</h3><p>设备编码：${o.device_code} | 插座：${o.socket_no}号 | 充电金额：¥${Number(o.amount_yuan).toFixed(2)} | 服务费：¥${Number(o.service_fee_yuan||0).toFixed(2)} | 合计：¥${Number(o.total_cost_yuan||o.amount_yuan).toFixed(2)}</p><p>创建时间：${fmt(o.created_at)}</p><p>预计结束：${fmt(o.estimated_finish_at)}</p><p>充电状态：${({CHARGING_ESTIMATED:"预计充电中",ENDED_ESTIMATED:"预计已结束",PROCESSING:"处理中",PENDING:"待处理",FAILED:"失败"})[o.charge_state]||"-"}</p><p>结果：${o.result_message||"处理中"}</p><span class="order-status ${statusClass(o.status)}">${statusLabel(o.status)}</span></article>`).join(""):'<div class="empty">你还没有订单，先去下一个试试。</div>'}catch(err){els.myOrders.innerHTML=`<div class="empty">加载订单失败：${err.message}</div>`}}
+    function qrImageUrl(value){const text=String(value||"").trim();if(!text)return"";if(/^https?:\/\/.+\.(png|jpg|jpeg|webp|gif)(\?.*)?$/i.test(text))return text;return `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(text)}`}
+    async function pollRechargeRequest(id){clearInterval(state.rechargePollTimer);state.rechargePollTimer=setInterval(async()=>{try{const rows=await requestJson("/api/me/recharge-requests?limit=20");const row=rows.find((item)=>Number(item.id)===Number(id));if(!row)return;if(row.status==="APPROVED"||row.status==="REJECTED"){clearInterval(state.rechargePollTimer);state.rechargePollTimer=null;await loadMyRecharges();if(row.status==="APPROVED"){const me=await requestJson("/api/me");els.userBalance.textContent=Number(me.balance_yuan||0).toFixed(2);setBox(els.rechargeStatus,`充值已到账（#${row.id}），当前余额：¥${Number(me.balance_yuan||0).toFixed(2)}`,"ok")}else{setBox(els.rechargeStatus,`充值申请已被驳回（#${row.id}）：${row.review_note||"请联系管理员"}`,"fail")}}}catch{}},4000)}
+    async function createBridgeRecharge(amount,note){const bridge=state.paymentBridgeUrl.replace(/\/$/,"");if(!bridge)throw new Error("未配置支付中转服务");const resp=await fetch(`${bridge}/api/recharge/create`,{method:"POST",headers:{Authorization:`Bearer ${state.token}`,"Content-Type":"application/json"},body:JSON.stringify({amount_yuan:amount,note,pay_type:2})});const text=await resp.text();let data={};try{data=text?JSON.parse(text):{}}catch{data={raw:text}}if(!resp.ok)throw new Error(data.detail||data.raw||`充值支付创建失败：${resp.status}`);els.rechargeAmount.value="";els.rechargeNote.value="";const payValue=data.qrcode||data.pay_url||(data.provider||{}).qrcode||(data.provider||{}).pay_url||(data.provider||{}).url||"";const qrSrc=qrImageUrl(payValue);if(qrSrc){els.rechargeQrWrap.classList.remove("hidden");els.rechargeQrImg.src=qrSrc}els.rechargeQrNote.innerHTML=`请扫码完成支付。<br>充值申请 #${data.recharge_request_id} 创建成功，支付回调后会自动补余额。${data.pay_url?`<br><a href="${data.pay_url}" target="_blank" rel="noopener noreferrer">打开支付链接</a>`:""}`;setBox(els.rechargeStatus,`充值支付已创建（#${data.recharge_request_id}），请完成支付。`,"pending");pollRechargeRequest(data.recharge_request_id);await loadMyRecharges()}
+    async function submitRecharge(){const amount=Number(els.rechargeAmount.value||"0"),note=els.rechargeNote.value.trim();if(!Number.isFinite(amount)||amount<=0)throw new Error("请输入正确的充值金额");if(state.paymentBridgeUrl){await createBridgeRecharge(amount,note);return}const data=await requestJson("/api/me/recharge-requests",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({amount_yuan:amount,note})});els.rechargeAmount.value="";els.rechargeNote.value="";setBox(els.rechargeStatus,`充值申请已提交（#${data.id}），请等待管理员审核。`,"ok");await loadMyRecharges()}
+    async function loadMyRecharges(){try{const rows=await requestJson("/api/me/recharge-requests?limit=20");els.myRecharges.innerHTML=rows.length?rows.map((r)=>`<article class="recharge-item"><h3>充值 ¥${Number(r.amount_yuan).toFixed(2)}</h3><p>申请时间：${fmt(r.created_at)}</p><p>备注：${r.note||"无"}</p><p>审核说明：${r.review_note||"暂无"}</p><span class="recharge-status ${statusClass(r.status)}">${statusLabel(r.status)}</span></article>`).join(""):'<div class="empty">还没有充值记录。</div>'}catch(err){els.myRecharges.innerHTML=`<div class="empty">加载充值记录失败：${err.message}</div>`}}
+    async function loadSocketOverview(){try{const regions=await requestJson("/api/socket-overview");els.socketOverview.innerHTML=regions.length?regions.map((region)=>`<article class="order-item"><h3>${region.region}</h3>${region.stations.map((station)=>`<p><strong>${station.name}</strong></p><p>${station.sockets.map((socket)=>`${socket.socket_no}号:${socket.status}${socket.detail?`（${socket.detail}）`:""}`).join(" | ")}</p>`).join("")}</article>`).join(""):'<div class="empty">暂无站点状态。</div>'}catch(err){els.socketOverview.innerHTML=`<div class="empty">加载站点状态失败：${err.message}</div>`}}
+    document.querySelectorAll("[data-auth-tab]").forEach((btn)=>btn.onclick=()=>{document.querySelectorAll("[data-auth-tab]").forEach((node)=>node.classList.toggle("active",node===btn));document.getElementById("login-form").classList.toggle("hidden",btn.dataset.authTab!=="login");document.getElementById("register-form").classList.toggle("hidden",btn.dataset.authTab!=="register")});
+    document.querySelectorAll("[data-page]").forEach((btn)=>btn.onclick=()=>{document.querySelectorAll("[data-page]").forEach((node)=>node.classList.toggle("active",node===btn));document.getElementById("page-order").classList.toggle("hidden",btn.dataset.page!=="order");document.getElementById("page-orders").classList.toggle("hidden",btn.dataset.page!=="orders");document.getElementById("page-status").classList.toggle("hidden",btn.dataset.page!=="status");document.getElementById("page-recharge").classList.toggle("hidden",btn.dataset.page!=="recharge");if(btn.dataset.page==="orders")loadMyOrders();if(btn.dataset.page==="status")loadSocketOverview();if(btn.dataset.page==="recharge")loadMyRecharges()});
+    document.getElementById("login-form").onsubmit=async(e)=>{e.preventDefault();try{const data=await requestJson("/api/auth/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({phone:document.getElementById("login-phone").value.trim(),password:document.getElementById("login-password").value})});setLoggedIn(data.user,data.token);setBox(els.authStatus,"登录成功。","ok");await Promise.all([loadStations(),loadMyOrders(),loadMyRecharges()])}catch(err){setBox(els.authStatus,`登录失败：${err.message}`,"fail")}};
+    document.getElementById("register-form").onsubmit=async(e)=>{e.preventDefault();const password=document.getElementById("register-password").value,confirm=document.getElementById("register-password-confirm").value;if(password!==confirm){setBox(els.authStatus,"两次输入的密码不一致。","fail");return}try{const data=await requestJson("/api/auth/register",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({phone:document.getElementById("register-phone").value.trim(),password})});setLoggedIn(data.user,data.token);setBox(els.authStatus,"注册成功，已自动登录。","ok");await Promise.all([loadStations(),loadMyOrders(),loadMyRecharges()])}catch(err){setBox(els.authStatus,`注册失败：${err.message}`,"fail")}};
+    document.getElementById("logout-btn").onclick=async()=>{try{await requestJson("/api/auth/logout",{method:"POST"})}catch{}clearLoginState()};
+    els.regionSelect.onchange=()=>{state.selectedRegion=els.regionSelect.value;state.selectedStation=null;renderStations()};
+    els.stationSelect.onchange=()=>{state.selectedStation=regionStations().find((x)=>x.id===els.stationSelect.value)||null;renderSelectedStation()};
+    els.socketSelect.onchange=renderSocketTip;
+    els.submitOrderBtn.onclick=async()=>{try{await createOrder()}catch(err){setBox(els.orderStatus,`提交失败：${err.message}`,"fail")}};
+    document.getElementById("refresh-orders-btn").onclick=loadMyOrders;
+    document.getElementById("refresh-socket-overview-btn").onclick=loadSocketOverview;
+    document.getElementById("refresh-recharge-btn").onclick=loadMyRecharges;
+    document.getElementById("submit-recharge-btn").onclick=async()=>{try{await submitRecharge()}catch(err){setBox(els.rechargeStatus,`提交失败：${err.message}`,"fail")}};
+    renderAmountButtons();loadServiceStatus();state.serviceTimer=setInterval(loadServiceStatus,15000);bootstrapAuth();
   </script>
 </body>
 </html>
-
-
-
-
-
-
-
-

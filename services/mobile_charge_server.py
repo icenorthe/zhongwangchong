@@ -22,9 +22,10 @@ import sqlite3
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from contextlib import asynccontextmanager
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 import hashlib
 from pathlib import Path
 from typing import Any
@@ -55,11 +56,27 @@ REQUIRE_AGENT_ONLINE_FOR_ORDERS = os.getenv("REQUIRE_AGENT_ONLINE_FOR_ORDERS", "
     "yes",
 }
 PAYMENT_MODE = os.getenv("PAYMENT_MODE", "disabled").strip().lower()
+PAYMENT_BRIDGE_URL = os.getenv("PAYMENT_BRIDGE_URL", "").strip()
 PAYMENT_TOKEN_SECRET = os.getenv("PAYMENT_TOKEN_SECRET", "").strip()
 PAYMENT_TOKEN_TTL_SECONDS = int(os.getenv("PAYMENT_TOKEN_TTL_SECONDS", "900"))
 BALANCE_REFUND_ON_FAIL = os.getenv("BALANCE_REFUND_ON_FAIL", "1").lower() in {"1", "true", "yes"}
 if PAYMENT_MODE not in {"disabled", "balance", "token"}:
     PAYMENT_MODE = "disabled"
+
+# 码支付配置。默认关闭，只有显式配置后才启用。
+CODEPAY_ID = os.getenv("CODEPAY_ID", "").strip()
+CODEPAY_KEY = os.getenv("CODEPAY_KEY", "").strip()
+CODEPAY_API = os.getenv("CODEPAY_API", "").strip().rstrip("/")
+CODEPAY_ENABLED = bool(CODEPAY_ID and CODEPAY_KEY and CODEPAY_API)
+SERVICE_FEE_YUAN = float(os.getenv("SERVICE_FEE_YUAN", "1.0"))
+
+MINUTES_PER_YUAN = 207
+DEFAULT_RECHARGE_QR_NOTE = "线下付款后提交充值申请，管理员确认到账后补余额。"
+REGION_SORT_ORDER = {
+    "综合楼": 1,
+    "学术交流中心": 2,
+    "东盟一号": 3,
+}
 
 
 def now_iso() -> str:
@@ -86,10 +103,106 @@ def get_nested_value(data: Any, path: str, default: Any = None) -> Any:
     return current
 
 
+def infer_station_region(name: str, raw_region: str = "") -> str:
+    region = raw_region.strip()
+    if region:
+        return region
+    for keyword in REGION_SORT_ORDER:
+        if keyword in name:
+            return keyword
+    return "未分区"
+
+
+def station_number_from_name(name: str) -> int:
+    match = re.search(r"(\d+)号站", name)
+    if not match:
+        return 9999
+    return int(match.group(1))
+
+
+def normalize_disabled_sockets(item: dict[str, Any], socket_count: int) -> list[int]:
+    raw = item.get("disabled_sockets", item.get("faulty_sockets", []))
+    if not isinstance(raw, list):
+        return []
+    disabled: set[int] = set()
+    for value in raw:
+        try:
+            socket_no = int(value)
+        except (TypeError, ValueError):
+            continue
+        if 1 <= socket_no <= socket_count:
+            disabled.add(socket_no)
+    return sorted(disabled)
+
+
+def approx_charge_minutes(amount_yuan: float) -> int:
+    return max(0, int(round(float(amount_yuan) * MINUTES_PER_YUAN)))
+
+
+def total_cost_yuan(amount_yuan: float) -> float:
+    return round(float(amount_yuan) + SERVICE_FEE_YUAN, 2)
+
+
+def estimated_finish_at(created_at: str, amount_yuan: float) -> str:
+    started_at = parse_iso(created_at)
+    if started_at is None:
+        return ""
+    return (started_at + timedelta(minutes=approx_charge_minutes(amount_yuan))).isoformat()
+
+
+def charge_state_for_order(status: str, estimated_finish: str) -> tuple[str, str]:
+    normalized = str(status or "").upper()
+    if normalized == "FAILED":
+        return "FAILED", ""
+    if normalized in {"PENDING", "PROCESSING"}:
+        return normalized, ""
+    finish_at = parse_iso(estimated_finish)
+    if normalized == "SUCCESS" and finish_at is not None:
+        if datetime.now(UTC) >= finish_at:
+            return "ENDED_ESTIMATED", estimated_finish
+        return "CHARGING_ESTIMATED", ""
+    return normalized, ""
+
+
+def clean_result_message(message: Any, status: str = "") -> str:
+    text = str(message or "").replace("\x00", "").strip()
+    replacements = {
+        "鎴愬姛": "充电已提交成功",
+        "鍏呯數鎺ュ彛杩斿洖澶辫触": "充电接口返回失败",
+        "config 缂哄皯 member_id": "配置缺少 member_id",
+        "璁㈠崟缂哄皯 device_code": "订单缺少 device_code",
+    }
+    for source, target in replacements.items():
+        if source in text:
+            return target
+
+    if not text:
+        if status == "SUCCESS":
+            return "充电已提交成功"
+        if status == "FAILED":
+            return "充电失败，请稍后重试"
+        return ""
+
+    suspicious = {"?", "？", "\ufffd"}
+    if text and all(char in suspicious for char in text):
+        if status == "SUCCESS":
+            return "充电已提交成功"
+        if status == "FAILED":
+            return "充电失败，请稍后重试"
+    meaningful_chars = re.findall(r"[\u4e00-\u9fffA-Za-z0-9]", text)
+    replacement_count = text.count("?") + text.count("？") + text.count("\ufffd")
+    if replacement_count >= 2 and len(meaningful_chars) <= 2:
+        if status == "SUCCESS":
+            return "充电已提交成功"
+        if status == "FAILED":
+            return "充电失败，请稍后重试"
+    return text
+
+
 def normalize_phone(phone: str) -> str:
     digits = re.sub(r"\D+", "", phone)
-    if len(digits) < 6 or len(digits) > 20:
-        raise HTTPException(status_code=422, detail="invalid phone number")
+    if len(digits) != 11:
+        raise HTTPException(status_code=422, detail="手机号必须为11位数字")
     return digits
 
 
@@ -163,16 +276,29 @@ def load_stations() -> list[dict[str, Any]]:
             continue
         station_id = str(item.get("id", device_code)).strip()
         socket_count = int(item.get("socket_count", item.get("total", 10)) or 10)
+        socket_count = max(1, min(socket_count, 20))
         address = str(item.get("address", "")).strip()
+        region = infer_station_region(name, str(item.get("region", "")))
+        disabled_sockets = normalize_disabled_sockets(item, socket_count)
         stations.append(
             {
                 "id": station_id,
                 "name": name,
                 "device_code": device_code,
-                "socket_count": max(1, min(socket_count, 20)),
+                "socket_count": socket_count,
                 "address": address,
+                "region": region,
+                "sort_order": int(item.get("sort_order", station_number_from_name(name))),
+                "disabled_sockets": disabled_sockets,
             }
         )
+    stations.sort(
+        key=lambda item: (
+            REGION_SORT_ORDER.get(item["region"], 99),
+            int(item.get("sort_order", 9999)),
+            item["name"],
+        )
+    )
     return stations
 
 
@@ -268,6 +394,44 @@ def init_db() -> None:
             )
             """
         )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS pending_payments (
+                id TEXT PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                station_name TEXT NOT NULL DEFAULT '',
+                device_code TEXT NOT NULL,
+                socket_no INTEGER NOT NULL DEFAULT 1,
+                amount_yuan REAL NOT NULL DEFAULT 1,
+                remark TEXT DEFAULT '',
+                service_fee REAL NOT NULL DEFAULT 1.0,
+                pay_type INTEGER NOT NULL DEFAULT 2,
+                status TEXT NOT NULL DEFAULT 'PENDING',
+                codepay_order_no TEXT DEFAULT '',
+                charge_order_id INTEGER DEFAULT NULL,
+                created_at TEXT NOT NULL,
+                expires_at TEXT NOT NULL,
+                paid_at TEXT DEFAULT ''
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS recharge_requests (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                phone TEXT NOT NULL DEFAULT '',
+                amount_yuan REAL NOT NULL,
+                status TEXT NOT NULL DEFAULT 'PENDING',
+                note TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                reviewed_at TEXT NOT NULL DEFAULT '',
+                review_note TEXT NOT NULL DEFAULT '',
+                FOREIGN KEY(user_id) REFERENCES users(id)
+            )
+            """
+        )
         ensure_user_columns(conn)
         ensure_order_columns(conn)
         conn.commit()
@@ -304,6 +468,10 @@ def ensure_order_columns(conn: sqlite3.Connection) -> None:
 
 
 def row_to_dict(row: sqlite3.Row) -> dict[str, Any]:
+    created_at = str(row["created_at"] or "")
+    amount_yuan = float(row["amount_yuan"] or 0)
+    estimated_finish = estimated_finish_at(created_at, amount_yuan)
+    charge_state, charge_finished_at = charge_state_for_order(str(row["status"] or ""), estimated_finish)
     return {
         "id": row["id"],
         "user_id": row["user_id"],
@@ -311,17 +479,24 @@ def row_to_dict(row: sqlite3.Row) -> dict[str, Any]:
         "station_name": row["station_name"],
         "device_code": row["device_code"],
         "socket_no": row["socket_no"],
-        "amount_yuan": row["amount_yuan"],
+        "amount_yuan": amount_yuan,
         "remark": row["remark"],
         "status": row["status"],
-        "result_message": row["result_message"],
+        "result_message": clean_result_message(row["result_message"], str(row["status"] or "")),
         "vendor_order_id": row["vendor_order_id"],
-        "created_at": row["created_at"],
+        "created_at": created_at,
         "updated_at": row["updated_at"],
+        "estimated_minutes": approx_charge_minutes(amount_yuan),
+        "estimated_finish_at": estimated_finish,
+        "charge_state": charge_state,
+        "charge_finished_at": charge_finished_at,
+        "service_fee_yuan": SERVICE_FEE_YUAN,
+        "total_cost_yuan": total_cost_yuan(amount_yuan),
     }
 
 
 class OrderCreate(BaseModel):
+    station_id: str = Field(default="", max_length=64)
     station_name: str = Field(default="", max_length=120)
     device_code: str = Field(min_length=1, max_length=64)
     socket_no: int = Field(ge=1, le=20)
@@ -344,6 +519,12 @@ class OrderView(BaseModel):
     vendor_order_id: str
     created_at: str
     updated_at: str
+    estimated_minutes: int = 0
+    estimated_finish_at: str = ""
+    charge_state: str = ""
+    charge_finished_at: str = ""
+    service_fee_yuan: float = 0
+    total_cost_yuan: float = 0
 
 
 class UserRegister(BaseModel):
@@ -395,9 +576,86 @@ class AgentHeartbeatPayload(BaseModel):
 class StationView(BaseModel):
     id: str
     name: str
+    region: str = ""
     device_code: str
     socket_count: int = 10
     address: str = ""
+    disabled_sockets: list[int] = Field(default_factory=list)
+
+
+class RechargeRequestCreate(BaseModel):
+    amount_yuan: float = Field(gt=0, le=10000)
+    note: str = Field(default="", max_length=200)
+
+
+class RechargeRequestReview(BaseModel):
+    review_note: str = Field(default="", max_length=200)
+
+
+class RechargeRequestView(BaseModel):
+    id: int
+    user_id: int
+    phone: str
+    amount_yuan: float
+    status: str
+    note: str
+    created_at: str
+    updated_at: str
+    reviewed_at: str = ""
+    review_note: str = ""
+
+
+class PaymentCreate(BaseModel):
+    station_name: str = Field(default="", max_length=120)
+    device_code: str = Field(min_length=1, max_length=64)
+    socket_no: int = Field(ge=1, le=20)
+    amount_yuan: float = Field(gt=0, le=100)
+    remark: str = Field(default="", max_length=200)
+    pay_type: int = Field(default=2, ge=1, le=2)  # 1=支付宝 2=微信
+
+
+def codepay_sign(params: dict[str, str]) -> str:
+    """码支付签名：按key排序拼接后加key，md5"""
+    sorted_str = "&".join(f"{k}={params[k]}" for k in sorted(params))
+    raw = sorted_str + "&key=" + CODEPAY_KEY
+    return hashlib.md5(raw.encode("utf-8")).hexdigest()
+
+
+def codepay_create(
+    *,
+    out_trade_no: str,
+    money: str,
+    pay_type: int,
+    notify_url: str,
+    return_url: str,
+) -> dict[str, Any]:
+    params = {
+        "id": CODEPAY_ID,
+        "type": str(pay_type),
+        "out_trade_no": out_trade_no,
+        "money": money,
+        "name": "充电服务费",
+        "notify_url": notify_url,
+        "return_url": return_url,
+    }
+    params["sign"] = codepay_sign(params)
+    body = urllib.parse.urlencode(params).encode("utf-8")
+    req = urllib.request.Request(
+        f"{CODEPAY_API}/pay/index.php",
+        data=body,
+        method="POST",
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+    )
+    with urllib.request.urlopen(req, timeout=15) as resp:
+        raw = resp.read().decode("utf-8")
+    return json.loads(raw)
+
+
+def codepay_verify_notify(params: dict[str, str]) -> bool:
+    """验证码支付回调签名"""
+    received_sign = params.pop("sign", "")
+    expected = codepay_sign({k: v for k, v in params.items() if v})
+    return secrets.compare_digest(received_sign, expected)
 
 
 class ChargerGateway:
@@ -712,7 +970,159 @@ def validate_payment_token(
     return row
 
 
+def find_station(station_id: str, device_code: str) -> dict[str, Any] | None:
+    station_id = station_id.strip()
+    device_code = device_code.strip()
+    for station in load_stations():
+        if station_id and station["id"] == station_id:
+            return station
+        if device_code and station["device_code"] == device_code:
+            return station
+    return None
+
+
+def validate_station_socket(station: dict[str, Any], socket_no: int) -> None:
+    if socket_no < 1 or socket_no > int(station.get("socket_count", 10)):
+        raise HTTPException(status_code=422, detail="插座号超出当前站点范围")
+    disabled_sockets = {int(value) for value in station.get("disabled_sockets", [])}
+    if socket_no in disabled_sockets:
+        raise HTTPException(status_code=409, detail=f"{socket_no}号插座故障，请换一个插座")
+
+
+def recharge_request_row_to_dict(row: sqlite3.Row) -> dict[str, Any]:
+    return {
+        "id": int(row["id"]),
+        "user_id": int(row["user_id"]),
+        "phone": str(row["phone"] or ""),
+        "amount_yuan": float(row["amount_yuan"] or 0),
+        "status": str(row["status"] or ""),
+        "note": str(row["note"] or ""),
+        "created_at": str(row["created_at"] or ""),
+        "updated_at": str(row["updated_at"] or ""),
+        "reviewed_at": str(row["reviewed_at"] or ""),
+        "review_note": str(row["review_note"] or ""),
+    }
+
+
+def socket_state_snapshot() -> list[dict[str, Any]]:
+    stations = load_stations()
+    status_by_key: dict[tuple[str, int], dict[str, Any]] = {}
+    with db_connect() as conn:
+        rows = conn.execute(
+            """
+            SELECT *
+            FROM orders
+            ORDER BY id DESC
+            """
+        ).fetchall()
+
+    for row in rows:
+        device_code = str(row["device_code"] or "").strip()
+        socket_no = int(row["socket_no"] or 0)
+        if not device_code or socket_no <= 0:
+            continue
+        key = (device_code, socket_no)
+        if key in status_by_key:
+            continue
+        order = row_to_dict(row)
+        normalized = str(order["status"] or "").upper()
+        if normalized in {"PENDING", "PROCESSING"}:
+            status_by_key[key] = {"status": "处理中", "order": order}
+            continue
+        if normalized == "SUCCESS" and order["charge_state"] == "CHARGING_ESTIMATED":
+            status_by_key[key] = {"status": "充电中", "order": order}
+            continue
+        status_by_key[key] = {"status": "空闲", "order": order}
+
+    regions: dict[str, dict[str, Any]] = {}
+    for station in stations:
+        region_name = str(station["region"])
+        region = regions.setdefault(region_name, {"region": region_name, "stations": []})
+        sockets: list[dict[str, Any]] = []
+        disabled = {int(item) for item in station.get("disabled_sockets", [])}
+        for socket_no in range(1, int(station["socket_count"]) + 1):
+            if socket_no in disabled:
+                sockets.append({"socket_no": socket_no, "status": "故障", "detail": "已标记故障"})
+                continue
+            snapshot = status_by_key.get((station["device_code"], socket_no))
+            if snapshot and snapshot["status"] != "空闲":
+                detail = ""
+                order = snapshot["order"]
+                if snapshot["status"] == "充电中":
+                    detail = f"预计结束：{order['estimated_finish_at']}"
+                elif snapshot["status"] == "处理中":
+                    detail = order["result_message"] or "订单正在处理"
+                sockets.append({"socket_no": socket_no, "status": snapshot["status"], "detail": detail})
+            else:
+                sockets.append({"socket_no": socket_no, "status": "空闲", "detail": ""})
+        region["stations"].append(
+            {
+                "id": station["id"],
+                "name": station["name"],
+                "device_code": station["device_code"],
+                "region": region_name,
+                "sockets": sockets,
+            }
+        )
+    return list(regions.values())
+
+
+def create_recharge_request(conn: sqlite3.Connection, *, user: sqlite3.Row, amount_yuan: float, note: str) -> sqlite3.Row:
+    ts = now_iso()
+    cursor = conn.execute(
+        """
+        INSERT INTO recharge_requests (user_id, phone, amount_yuan, status, note, created_at, updated_at)
+        VALUES (?, ?, ?, 'PENDING', ?, ?, ?)
+        """,
+        (int(user["id"]), str(user["phone"] or ""), float(amount_yuan), note.strip(), ts, ts),
+    )
+    row = conn.execute("SELECT * FROM recharge_requests WHERE id = ?", (cursor.lastrowid,)).fetchone()
+    if row is None:
+        raise HTTPException(status_code=500, detail="failed to create recharge request")
+    return row
+
+
+def review_recharge_request(
+    conn: sqlite3.Connection,
+    *,
+    request_id: int,
+    approve: bool,
+    review_note: str,
+) -> sqlite3.Row:
+    row = conn.execute(
+        "SELECT * FROM recharge_requests WHERE id = ?",
+        (request_id,),
+    ).fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="recharge request not found")
+    if str(row["status"] or "") != "PENDING":
+        raise HTTPException(status_code=409, detail="recharge request already reviewed")
+
+    ts = now_iso()
+    next_status = "APPROVED" if approve else "REJECTED"
+    conn.execute(
+        """
+        UPDATE recharge_requests
+        SET status = ?, updated_at = ?, reviewed_at = ?, review_note = ?
+        WHERE id = ?
+        """,
+        (next_status, ts, ts, review_note.strip(), request_id),
+    )
+    if approve:
+        apply_balance_delta(
+            conn,
+            user_id=int(row["user_id"]),
+            delta_yuan=float(row["amount_yuan"]),
+            reason=f"recharge_request:{request_id}",
+        )
+    updated = conn.execute("SELECT * FROM recharge_requests WHERE id = ?", (request_id,)).fetchone()
+    if updated is None:
+        raise HTTPException(status_code=500, detail="failed to update recharge request")
+    return updated
+
+
 def update_order_result(order_id: int, status: str, message: str, vendor_order_id: str = "") -> None:
+    message = clean_result_message(message, status)
     with db_connect() as conn:
         conn.execute("BEGIN IMMEDIATE")
         row = conn.execute(
@@ -834,10 +1244,13 @@ def get_service_status() -> dict[str, Any]:
         "accepting_orders": live_processor_online,
         "allow_order_submission": allow_order_submission,
         "payment_mode": PAYMENT_MODE,
+        "payment_bridge_url": PAYMENT_BRIDGE_URL,
         "payment_token_required": PAYMENT_MODE == "token",
         "balance_enabled": PAYMENT_MODE == "balance",
         "balance_refund_on_fail": BALANCE_REFUND_ON_FAIL,
         "payment_qr_url": payment_qr_url,
+        "manual_recharge_enabled": bool(payment_qr_url),
+        "recharge_qr_note": DEFAULT_RECHARGE_QR_NOTE,
         **agent_status,
     }
 
@@ -898,8 +1311,14 @@ def health() -> dict[str, Any]:
 
 
 @app.get("/api/stations", response_model=list[StationView])
-def list_stations(q: str | None = Query(default=None, max_length=100)) -> list[StationView]:
+def list_stations(
+    q: str | None = Query(default=None, max_length=100),
+    region: str | None = Query(default=None, max_length=100),
+) -> list[StationView]:
     stations = load_stations()
+    if region:
+        region_name = region.strip().lower()
+        stations = [station for station in stations if region_name in station["region"].lower()]
     if q:
         query = q.strip().lower()
         stations = [
@@ -908,6 +1327,11 @@ def list_stations(q: str | None = Query(default=None, max_length=100)) -> list[S
             if query in station["name"].lower() or query in station["device_code"].lower()
         ]
     return [StationView(**station) for station in stations[:200]]
+
+
+@app.get("/api/socket-overview")
+def get_socket_overview() -> list[dict[str, Any]]:
+    return socket_state_snapshot()
 
 
 @app.post("/api/auth/register", response_model=AuthResponse)
@@ -1006,6 +1430,46 @@ def my_orders(
     return [OrderView(**row_to_dict(row)) for row in rows]
 
 
+@app.get("/api/me/recharge-requests", response_model=list[RechargeRequestView])
+def my_recharge_requests(
+    limit: int = Query(default=50, ge=1, le=200),
+    user: sqlite3.Row = Depends(require_user),
+) -> list[RechargeRequestView]:
+    with db_connect() as conn:
+        rows = conn.execute(
+            """
+            SELECT *
+            FROM recharge_requests
+            WHERE user_id = ?
+            ORDER BY id DESC
+            LIMIT ?
+            """,
+            (user["id"], limit),
+        ).fetchall()
+    return [RechargeRequestView(**recharge_request_row_to_dict(row)) for row in rows]
+
+
+@app.post("/api/me/recharge-requests", response_model=RechargeRequestView)
+def create_my_recharge_request(
+    payload: RechargeRequestCreate,
+    user: sqlite3.Row = Depends(require_user),
+) -> RechargeRequestView:
+    with db_connect() as conn:
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            row = create_recharge_request(
+                conn,
+                user=user,
+                amount_yuan=float(payload.amount_yuan),
+                note=payload.note,
+            )
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+    return RechargeRequestView(**recharge_request_row_to_dict(row))
+
+
 @app.post("/api/orders", response_model=OrderView)
 def create_order(payload: OrderCreate, user: sqlite3.Row = Depends(require_user)) -> OrderView:
     service_status = get_service_status()
@@ -1017,6 +1481,17 @@ def create_order(payload: OrderCreate, user: sqlite3.Row = Depends(require_user)
     payment_mode = PAYMENT_MODE
     payment_token = payload.payment_token.strip()
     balance_deducted = 0
+    total_cost = total_cost_yuan(float(payload.amount_yuan))
+    station = find_station(payload.station_id, payload.device_code)
+    if station is not None:
+        validate_station_socket(station, int(payload.socket_no))
+        station_name = station["name"]
+        device_code = station["device_code"]
+    else:
+        station_name = payload.station_name.strip()
+        device_code = payload.device_code.strip()
+        if not device_code:
+            raise HTTPException(status_code=422, detail="设备编码不能为空")
 
     with db_connect() as conn:
         try:
@@ -1030,12 +1505,12 @@ def create_order(payload: OrderCreate, user: sqlite3.Row = Depends(require_user)
                 if balance_row is None:
                     raise HTTPException(status_code=404, detail="user not found")
                 current_balance = float(balance_row["balance_yuan"] or 0)
-                if current_balance + 1e-9 < float(payload.amount_yuan):
+                if current_balance + 1e-9 < total_cost:
                     raise HTTPException(status_code=402, detail="余额不足，请先充值")
                 apply_balance_delta(
                     conn,
                     user_id=int(user["id"]),
-                    delta_yuan=-float(payload.amount_yuan),
+                    delta_yuan=-total_cost,
                     reason=f"order_payment:{user['id']}",
                 )
                 balance_deducted = 1
@@ -1045,7 +1520,7 @@ def create_order(payload: OrderCreate, user: sqlite3.Row = Depends(require_user)
                 validate_payment_token(
                     conn,
                     user_id=int(user["id"]),
-                    amount_yuan=float(payload.amount_yuan),
+                    amount_yuan=total_cost,
                     raw_token=payment_token,
                 )
 
@@ -1065,11 +1540,11 @@ def create_order(payload: OrderCreate, user: sqlite3.Row = Depends(require_user)
                 """,
                 (
                     user["id"],
-                    payload.device_code,
+                    device_code,
                     phone,
                     0,
-                    payload.station_name,
-                    payload.device_code,
+                    station_name,
+                    device_code,
                     payload.socket_no,
                     payload.amount_yuan,
                     payload.remark,
@@ -1197,6 +1672,68 @@ def adjust_user_balance(user_id: int, payload: BalanceAdjustPayload) -> dict[str
     return {"ok": True, "user_id": user_id, "balance_yuan": new_balance}
 
 
+@app.get("/api/admin/recharge-requests", dependencies=[Depends(require_admin)])
+def admin_list_recharge_requests(
+    limit: int = Query(default=100, ge=1, le=500),
+    status: str | None = Query(default=None, max_length=20),
+) -> list[dict[str, Any]]:
+    clauses: list[str] = []
+    params: list[Any] = []
+    if status:
+        clauses.append("status = ?")
+        params.append(status.strip().upper())
+    where_sql = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+    params.append(limit)
+    with db_connect() as conn:
+        rows = conn.execute(
+            f"""
+            SELECT *
+            FROM recharge_requests
+            {where_sql}
+            ORDER BY id DESC
+            LIMIT ?
+            """,
+            params,
+        ).fetchall()
+    return [recharge_request_row_to_dict(row) for row in rows]
+
+
+@app.post("/api/admin/recharge-requests/{request_id}/approve", dependencies=[Depends(require_admin)])
+def admin_approve_recharge_request(request_id: int, payload: RechargeRequestReview) -> dict[str, Any]:
+    with db_connect() as conn:
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            row = review_recharge_request(
+                conn,
+                request_id=request_id,
+                approve=True,
+                review_note=payload.review_note,
+            )
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+    return {"ok": True, "request": recharge_request_row_to_dict(row)}
+
+
+@app.post("/api/admin/recharge-requests/{request_id}/reject", dependencies=[Depends(require_admin)])
+def admin_reject_recharge_request(request_id: int, payload: RechargeRequestReview) -> dict[str, Any]:
+    with db_connect() as conn:
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            row = review_recharge_request(
+                conn,
+                request_id=request_id,
+                approve=False,
+                review_note=payload.review_note,
+            )
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+    return {"ok": True, "request": recharge_request_row_to_dict(row)}
+
+
 @app.post("/api/admin/payments/issue", dependencies=[Depends(require_admin)])
 def admin_issue_payment_token(payload: PaymentIssuePayload) -> dict[str, Any]:
     with db_connect() as conn:
@@ -1224,6 +1761,9 @@ def admin_stats() -> dict[str, Any]:
         processing = conn.execute("SELECT COUNT(*) FROM orders WHERE status = 'PROCESSING'").fetchone()[0]
         success = conn.execute("SELECT COUNT(*) FROM orders WHERE status = 'SUCCESS'").fetchone()[0]
         failed = conn.execute("SELECT COUNT(*) FROM orders WHERE status = 'FAILED'").fetchone()[0]
+        recharge_pending = conn.execute(
+            "SELECT COUNT(*) FROM recharge_requests WHERE status = 'PENDING'"
+        ).fetchone()[0]
     return {
         "ok": True,
         "gateway_mode": gateway.mode,
@@ -1232,6 +1772,7 @@ def admin_stats() -> dict[str, Any]:
         "processing": processing,
         "success": success,
         "failed": failed,
+        "recharge_pending": recharge_pending,
         **get_service_status(),
     }
 
@@ -1292,8 +1833,146 @@ def agent_complete_order(order_id: int, payload: AgentCompletePayload) -> dict[s
     }
 
 
+# ── 码支付路由 ────────────────────────────────────────────────
+
+@app.post("/api/payment/create", response_model=dict)
+def payment_create(payload: PaymentCreate, user: sqlite3.Row = Depends(require_user)) -> dict[str, Any]:
+    """创建码支付订单，返回支付二维码URL"""
+    if not CODEPAY_ENABLED:
+        raise HTTPException(status_code=503, detail="支付功能未启用")
+
+    pay_id = secrets.token_urlsafe(16)
+    ts = now_iso()
+    expires_at = datetime.fromtimestamp(
+        datetime.now(UTC).timestamp() + 600, UTC
+    ).isoformat()
+
+    with db_connect() as conn:
+        conn.execute(
+            """
+            INSERT INTO pending_payments
+              (id, user_id, station_name, device_code, socket_no, amount_yuan, remark,
+               service_fee, pay_type, status, created_at, expires_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', ?, ?)
+            """,
+            (
+                pay_id, user["id"], payload.station_name, payload.device_code,
+                payload.socket_no, payload.amount_yuan, payload.remark,
+                SERVICE_FEE_YUAN, payload.pay_type, ts, expires_at,
+            ),
+        )
+        conn.commit()
+
+    notify_url = f"https://icenorth.pythonanywhere.com/api/payment/notify"
+    return_url = f"https://icenorth.pythonanywhere.com/"
+
+    try:
+        result = codepay_create(
+            out_trade_no=pay_id,
+            money=f"{SERVICE_FEE_YUAN:.2f}",
+            pay_type=payload.pay_type,
+            notify_url=notify_url,
+            return_url=return_url,
+        )
+    except urllib.error.URLError:
+        raise HTTPException(status_code=503, detail="支付服务当前不可用，请联系管理员切换支付方式")
+    except Exception as err:
+        raise HTTPException(status_code=502, detail=f"支付接口错误: {err}")
+
+    if str(result.get("code", "")) != "1":
+        raise HTTPException(status_code=502, detail=result.get("msg", "支付创建失败"))
+
+    return {
+        "ok": True,
+        "pay_id": pay_id,
+        "qrcode": result.get("qrcode", ""),
+        "pay_url": result.get("pay_url", ""),
+        "amount": SERVICE_FEE_YUAN,
+        "expires_at": expires_at,
+    }
+
+
+@app.get("/api/payment/status/{pay_id}")
+def payment_status(pay_id: str, user: sqlite3.Row = Depends(require_user)) -> dict[str, Any]:
+    """轮询支付状态"""
+    with db_connect() as conn:
+        row = conn.execute(
+            "SELECT * FROM pending_payments WHERE id = ? AND user_id = ?",
+            (pay_id, user["id"]),
+        ).fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="支付订单不存在")
+    return {
+        "ok": True,
+        "status": row["status"],
+        "charge_order_id": row["charge_order_id"],
+        "paid_at": row["paid_at"],
+    }
+
+
+@app.post("/api/payment/notify")
+async def payment_notify(request) -> dict[str, Any]:
+    """码支付异步回调（免鉴权）"""
+    from fastapi import Request
+    body = await request.body()
+    params = dict(urllib.parse.parse_qsl(body.decode("utf-8")))
+
+    if not codepay_verify_notify(dict(params)):
+        return {"code": 0, "msg": "sign error"}
+
+    pay_id = params.get("out_trade_no", "")
+    trade_no = params.get("trade_no", "")
+    trade_status = params.get("trade_status", "")
+
+    if trade_status != "TRADE_SUCCESS":
+        return {"code": 1, "msg": "ok"}
+
+    with db_connect() as conn:
+        row = conn.execute(
+            "SELECT * FROM pending_payments WHERE id = ? AND status = 'PENDING'",
+            (pay_id,),
+        ).fetchone()
+        if row is None:
+            return {"code": 1, "msg": "ok"}
+
+        ts = now_iso()
+        conn.execute(
+            "UPDATE pending_payments SET status='PAID', codepay_order_no=?, paid_at=? WHERE id=?",
+            (trade_no, ts, pay_id),
+        )
+        conn.commit()
+
+        # 创建充电订单
+        try:
+            cursor = conn.execute(
+                """
+                INSERT INTO orders
+                  (user_id, pile_no, phone, minutes, station_name, device_code, socket_no,
+                   amount_yuan, remark, payment_mode, payment_token, balance_deducted,
+                   balance_refunded, status, created_at, updated_at)
+                VALUES (?, ?, ?, 0, ?, ?, ?, ?, ?, 'codepay', ?, 0, 0, 'PENDING', ?, ?)
+                """,
+                (
+                    row["user_id"], row["device_code"],
+                    str(row["user_id"]),
+                    row["station_name"], row["device_code"],
+                    row["socket_no"], row["amount_yuan"],
+                    row["remark"], pay_id, ts, ts,
+                ),
+            )
+            charge_order_id = cursor.lastrowid
+            conn.execute(
+                "UPDATE pending_payments SET charge_order_id=? WHERE id=?",
+                (charge_order_id, pay_id),
+            )
+            conn.commit()
+        except Exception:
+            conn.rollback()
+
+    return {"code": 1, "msg": "ok"}
+
+
 if __name__ == "__main__":
     import uvicorn
 
     uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", "8000")), reload=False)
-

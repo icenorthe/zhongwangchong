@@ -30,6 +30,7 @@ if SECRETS_PATH.exists():
             "REQUIRE_AGENT_ONLINE_FOR_ORDERS",
             "AGENT_HEARTBEAT_EXPIRE_SECONDS",
             "PAYMENT_MODE",
+            "PAYMENT_BRIDGE_URL",
             "PAYMENT_TOKEN_SECRET",
             "PAYMENT_TOKEN_TTL_SECONDS",
             "BALANCE_REFUND_ON_FAIL",

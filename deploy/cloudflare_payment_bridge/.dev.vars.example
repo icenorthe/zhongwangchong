@@ -1,0 +1,7 @@
+CODEPAY_ID=replace-with-provider-id
+CODEPAY_KEY=replace-with-provider-key
+CODEPAY_API_BASE=https://codepay.upaypro.com
+PYTHONANYWHERE_BASE_URL=https://icenorth.pythonanywhere.com
+PYTHONANYWHERE_ADMIN_TOKEN=replace-with-admin-token
+RETURN_URL=https://icenorth.pythonanywhere.com/
+

@@ -1,72 +1,102 @@
 [
   {
-    "id": "cd-29",
-    "name": "29号站成都大学综合楼二号充电区V3.0",
-    "device_code": "13061856473",
-    "socket_count": 10,
-    "address": "四川省成都市龙泉驿区十陵街道成都大学"
-  },
-  {
-    "id": "cd-39",
-    "name": "39号站成都大学学术交流中心三号充电区V3.0",
-    "device_code": "13061858677",
-    "socket_count": 10,
-    "address": "四川省成都市龙泉驿区十陵街道成都大学"
-  },
-  {
-    "id": "cd-1",
-    "name": "1号站成都大学东盟一号充电区V3.0",
-    "device_code": "13061886272",
-    "socket_count": 10,
-    "address": "四川省成都市龙泉驿区十陵街道成都大学"
-  },
-  {
-    "id": "cd-21",
-    "name": "21号站成都大学东盟一号充电区V3.0",
-    "device_code": "13061886983",
-    "socket_count": 10,
-    "address": "四川省成都市龙泉驿区十陵街道成都大学"
-  },
-  {
     "id": "cd-10",
+    "region": "综合楼",
+    "sort_order": 10,
     "name": "10号站成都大学综合楼二号充电区V3.0",
     "device_code": "13061887387",
     "socket_count": 10,
-    "address": "四川省成都市龙泉驿区十陵街道成都大学"
-  },
-  {
-    "id": "cd-2",
-    "name": "2号站成都大学东盟一号充电区V3.0",
-    "device_code": "13061887528",
-    "socket_count": 10,
-    "address": "四川省成都市龙泉驿区十陵街道成都大学"
-  },
-  {
-    "id": "cd-33",
-    "name": "33号站成都大学东盟一号充电区V3.0",
-    "device_code": "13061887577",
-    "socket_count": 10,
-    "address": "四川省成都市龙泉驿区十陵街道成都大学"
-  },
-  {
-    "id": "cd-35",
-    "name": "35号站成都大学综合楼二号充电区V3.0",
-    "device_code": "13061887585",
-    "socket_count": 10,
+    "disabled_sockets": [],
     "address": "四川省成都市龙泉驿区十陵街道成都大学"
   },
   {
     "id": "cd-19",
+    "region": "综合楼",
+    "sort_order": 19,
     "name": "19号站成都大学综合楼二号充电区V3.0",
     "device_code": "13061887700",
     "socket_count": 10,
+    "disabled_sockets": [],
+    "address": "四川省成都市龙泉驿区十陵街道成都大学"
+  },
+  {
+    "id": "cd-29",
+    "region": "综合楼",
+    "sort_order": 29,
+    "name": "29号站成都大学综合楼二号充电区V3.0",
+    "device_code": "13061856473",
+    "socket_count": 10,
+    "disabled_sockets": [],
+    "address": "四川省成都市龙泉驿区十陵街道成都大学"
+  },
+  {
+    "id": "cd-35",
+    "region": "综合楼",
+    "sort_order": 35,
+    "name": "35号站成都大学综合楼二号充电区V3.0",
+    "device_code": "13061887585",
+    "socket_count": 10,
+    "disabled_sockets": [],
     "address": "四川省成都市龙泉驿区十陵街道成都大学"
   },
   {
     "id": "cd-36",
+    "region": "学术交流中心",
+    "sort_order": 36,
     "name": "36号站成都大学学术交流中心三号充电区V3.0",
     "device_code": "13061887809",
     "socket_count": 10,
+    "disabled_sockets": [],
+    "address": "四川省成都市龙泉驿区十陵街道成都大学"
+  },
+  {
+    "id": "cd-39",
+    "region": "学术交流中心",
+    "sort_order": 39,
+    "name": "39号站成都大学学术交流中心三号充电区V3.0",
+    "device_code": "13061858677",
+    "socket_count": 10,
+    "disabled_sockets": [],
+    "address": "四川省成都市龙泉驿区十陵街道成都大学"
+  },
+  {
+    "id": "cd-1",
+    "region": "东盟一号",
+    "sort_order": 1,
+    "name": "1号站成都大学东盟一号充电区V3.0",
+    "device_code": "13061886272",
+    "socket_count": 10,
+    "disabled_sockets": [],
+    "address": "四川省成都市龙泉驿区十陵街道成都大学"
+  },
+  {
+    "id": "cd-2",
+    "region": "东盟一号",
+    "sort_order": 2,
+    "name": "2号站成都大学东盟一号充电区V3.0",
+    "device_code": "13061887528",
+    "socket_count": 10,
+    "disabled_sockets": [],
+    "address": "四川省成都市龙泉驿区十陵街道成都大学"
+  },
+  {
+    "id": "cd-21",
+    "region": "东盟一号",
+    "sort_order": 21,
+    "name": "21号站成都大学东盟一号充电区V3.0",
+    "device_code": "13061886983",
+    "socket_count": 10,
+    "disabled_sockets": [],
+    "address": "四川省成都市龙泉驿区十陵街道成都大学"
+  },
+  {
+    "id": "cd-33",
+    "region": "东盟一号",
+    "sort_order": 33,
+    "name": "33号站成都大学东盟一号充电区V3.0",
+    "device_code": "13061887577",
+    "socket_count": 10,
+    "disabled_sockets": [],
     "address": "四川省成都市龙泉驿区十陵街道成都大学"
   }
 ]
