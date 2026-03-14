@@ -13,13 +13,14 @@ from typing import Any
 try:
     from services.project_paths import CONFIG_DIR
     from services.realtime_http import post_form_json as realtime_post_form_json
+    from services.station_config import load_station_source_items
 except ImportError:
     from project_paths import CONFIG_DIR
     from realtime_http import post_form_json as realtime_post_form_json
+    from station_config import load_station_source_items
 
 
 CHARGE_API_CONFIG_PATH = CONFIG_DIR / "charge_api_config.json"
-STATIONS_PATH = CONFIG_DIR / "stations.json"
 STATION_PLACEHOLDERS_PATH = CONFIG_DIR / "station_placeholders.json"
 REALTIME_PARSECK_URL = "https://wx.jwnzn.com/mini_jwnzn/miniapp/mp_parseCk.action"
 REALTIME_USING_ORDERS_URL = "https://wx.jwnzn.com/mini_jwnzn/miniapp/mp_pileUsingOrders.action"
@@ -170,12 +171,7 @@ def load_station_placeholders() -> list[dict[str, Any]]:
 
 
 def load_stations() -> list[dict[str, Any]]:
-    if not STATIONS_PATH.exists():
-        return []
-    data = json.loads(STATIONS_PATH.read_text(encoding="utf-8-sig"))
-    if not isinstance(data, list):
-        return []
-    merged_data = list(data) + load_station_placeholders()
+    merged_data = load_station_source_items() + load_station_placeholders()
     stations: list[dict[str, Any]] = []
     seen_ids: set[str] = set()
     seen_numbers: set[int] = set()

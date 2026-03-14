@@ -9,7 +9,7 @@ from typing import Any
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_STATIONS_PATH = PROJECT_ROOT / "config" / "stations.json"
+DEFAULT_STATIONS_PATH = PROJECT_ROOT / "config" / "stations.local.json"
 JSON_PARSER = JSONDecoder()
 REGION_SORT_ORDER = {
     "综合楼": 1,
@@ -181,10 +181,10 @@ def merge_stations(existing: list[dict[str, Any]], discovered: list[dict[str, An
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Merge station metadata from a capture log into config/stations.json")
+    parser = argparse.ArgumentParser(description="Merge station metadata from a capture log into local station config")
     parser.add_argument("--capture", required=True, help="Path to the captured log file")
-    parser.add_argument("--stations", default=str(DEFAULT_STATIONS_PATH), help="Path to stations.json")
-    parser.add_argument("--write", action="store_true", help="Write merged results back to stations.json")
+    parser.add_argument("--stations", default=str(DEFAULT_STATIONS_PATH), help="Path to stations.local.json")
+    parser.add_argument("--write", action="store_true", help="Write merged results back to the selected stations file")
     args = parser.parse_args()
 
     capture_path = Path(args.capture).expanduser().resolve()

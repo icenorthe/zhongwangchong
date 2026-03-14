@@ -192,5 +192,45 @@ from services.pythonanywhere_app import app
 
 - 如果 `requirements_mobile.txt` 变了，仍然要在 PythonAnywhere Bash 里手动执行一次 `pip install -r requirements_mobile.txt`
 
+## 11）自动备份云端数据库
+
+为了防止 PythonAnywhere 站点被破坏、误操作或异常导致业务中断，本地现在可以自动把云端 `runtime/orders.db` 拉回备份。
+
+备份内容包括：
+
+- 用户账号
+- 用户余额
+- 订单记录
+- 充值记录
+
+手动执行一次：
+
+```bat
+立即备份云端数据库.bat
+```
+
+注册 Windows 自动备份任务：
+
+```bat
+注册云端数据库自动备份.bat
+```
+
+默认行为：
+
+- 每 2 小时自动备份一次
+- 备份文件保存到 `archive/pythonanywhere_db/`
+- 同时更新一份 `orders-latest.db`
+- 自动清理旧数据库备份，只保留最近 5 份 `orders-*.db`
+- 同时导出退款清单：
+  - `refund-users-latest.json`
+  - `refund-users-latest.csv`（可直接用 Excel 打开）
+
+相关文件：
+
+- `tools/backup_pythonanywhere_db.py`
+- `tools/register_db_backup_task.ps1`
+- `立即备份云端数据库.bat`
+- `注册云端数据库自动备份.bat`
+
 
 

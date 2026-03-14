@@ -38,16 +38,17 @@ from pydantic import BaseModel, Field
 try:
     from services.project_paths import CONFIG_DIR, RUNTIME_DIR, WEB_ASSETS_DIR
     from services.realtime_http import post_form_json as realtime_post_form_json
+    from services.station_config import load_station_source_items
 except ImportError:
     from project_paths import CONFIG_DIR, RUNTIME_DIR, WEB_ASSETS_DIR
     from realtime_http import post_form_json as realtime_post_form_json
+    from station_config import load_station_source_items
 
 DB_PATH = RUNTIME_DIR / "orders.db"
 HTML_PATH = WEB_ASSETS_DIR / "mobile_order.html"
 ADMIN_HTML_PATH = WEB_ASSETS_DIR / "admin_orders.html"
 GATEWAY_CONFIG_PATH = CONFIG_DIR / "gateway_config.json"
 CHARGE_API_CONFIG_PATH = CONFIG_DIR / "charge_api_config.json"
-STATIONS_PATH = CONFIG_DIR / "stations.json"
 STATION_PLACEHOLDERS_PATH = CONFIG_DIR / "station_placeholders.json"
 POLL_INTERVAL_SECONDS = float(os.getenv("ORDER_POLL_INTERVAL_SECONDS", "2"))
 ADMIN_TOKEN = os.getenv("ADMIN_TOKEN", "")
@@ -416,13 +417,7 @@ def get_user_by_session_token(token: str) -> sqlite3.Row | None:
 
 
 def load_stations() -> list[dict[str, Any]]:
-    if not STATIONS_PATH.exists():
-        return []
-    raw = STATIONS_PATH.read_text(encoding="utf-8-sig")
-    data = json.loads(raw)
-    if not isinstance(data, list):
-        return []
-    merged_data = list(data) + load_station_placeholders()
+    merged_data = load_station_source_items() + load_station_placeholders()
     stations: list[dict[str, Any]] = []
     seen_ids: set[str] = set()
     seen_numbers: set[int] = set()

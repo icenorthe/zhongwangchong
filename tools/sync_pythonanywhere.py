@@ -14,6 +14,8 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 CONFIG_PATH = PROJECT_ROOT / "config" / "pythonanywhere_sync_config.json"
 STATIONS_PATH = PROJECT_ROOT / "config" / "stations.json"
+STATIONS_PUBLIC_PATH = PROJECT_ROOT / "config" / "stations.public.json"
+STATIONS_LOCAL_PATH = PROJECT_ROOT / "config" / "stations.local.json"
 STATION_PLACEHOLDERS_PATH = PROJECT_ROOT / "config" / "station_placeholders.json"
 
 
@@ -59,10 +61,11 @@ def expand_number_spec(spec: str) -> list[int]:
 
 
 def build_generated_uploads() -> dict[str, bytes]:
-    if not STATIONS_PATH.exists() or not STATION_PLACEHOLDERS_PATH.exists():
+    source_path = STATIONS_LOCAL_PATH if STATIONS_LOCAL_PATH.exists() else STATIONS_PATH
+    if not source_path.exists() or not STATION_PLACEHOLDERS_PATH.exists():
         return {}
     try:
-        stations = json.loads(STATIONS_PATH.read_text(encoding="utf-8-sig"))
+        stations = json.loads(source_path.read_text(encoding="utf-8-sig"))
         placeholders = json.loads(STATION_PLACEHOLDERS_PATH.read_text(encoding="utf-8-sig"))
     except Exception:
         return {}
