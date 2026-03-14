@@ -8,6 +8,36 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+function Test-GitHubConnectivity {
+  param(
+    [string]$HostName = "github.com",
+    [int]$Port = 443
+  )
+
+  try {
+    $result = Test-NetConnection -ComputerName $HostName -Port $Port -WarningAction SilentlyContinue
+    return [bool]$result.TcpTestSucceeded
+  } catch {
+    return $false
+  }
+}
+
+function Get-GitPushErrorHint {
+  param([string]$Message)
+
+  $text = ""
+  if ($null -ne $Message) {
+    $text = [string]$Message
+  }
+  if ($text -match "Could not connect to server" -or $text -match "Connection was reset" -or $text -match "Failed to connect to github.com port 443") {
+    return "Network to github.com:443 is unavailable. Check proxy, VPN, firewall, or local network first."
+  }
+  if ($text -match "Authentication failed" -or $text -match "Repository not found") {
+    return "Authentication or repository permission failed. Check GitHub login/token and repo access."
+  }
+  return ""
+}
+
 function Invoke-Git {
   param(
     [Parameter(ValueFromRemainingArguments = $true)]
@@ -63,6 +93,10 @@ if (-not $hasOrigin) {
   Invoke-Git remote add origin "$RepoUrl"
 }
 
+if (-not (Test-GitHubConnectivity)) {
+  throw "Cannot reach github.com:443. Fix network/proxy/VPN first, then retry sync."
+}
+
 Invoke-Git add -A
 
 $status = (& git status --porcelain)
@@ -81,14 +115,30 @@ if ($status -and $status.Trim().Length -gt 0) {
 try {
   Invoke-Git fetch origin --prune
 } catch {
-  Write-Host "fetch failed (maybe first push or auth/network issue); continuing."
+  $hint = Get-GitPushErrorHint $_.Exception.Message
+  if ($hint) {
+    throw $hint
+  }
+  Write-Host "fetch failed; continuing."
 }
 
 try {
   Invoke-Git pull --rebase origin $Branch
 } catch {
+  $hint = Get-GitPushErrorHint $_.Exception.Message
+  if ($hint) {
+    throw $hint
+  }
   Write-Host "pull --rebase failed (remote branch may not exist yet); continuing."
 }
 
-Invoke-Git push -u origin $Branch
+try {
+  Invoke-Git push -u origin $Branch
+} catch {
+  $hint = Get-GitPushErrorHint $_.Exception.Message
+  if ($hint) {
+    throw $hint
+  }
+  throw
+}
 Write-Host "Done."

@@ -17,7 +17,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0sync_github.ps1" -Repo
 
 if errorlevel 1 (
   echo.
-  echo Sync failed. Check network, Git login, or remote permissions.
+  echo Sync failed. Read the PowerShell error above for the exact cause.
   if /i not "%NO_PAUSE%"=="--nopause" pause
   exit /b 1
 )
