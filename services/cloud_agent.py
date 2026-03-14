@@ -7,7 +7,7 @@ import subprocess
 import time
 import urllib.error
 import urllib.request
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 try:
@@ -18,6 +18,7 @@ except ImportError:
 
 CONFIG_PATH = CONFIG_DIR / "cloud_agent_config.json"
 LOG_PATH = LOG_DIR / "cloud_agent.log"
+LAST_SOCKET_PUSH_AT = 0.0
 
 
 def write_log(message: str) -> None:
@@ -89,6 +90,52 @@ def safe_send_heartbeat(config: dict[str, Any], *, status: str, current_order_id
         write_log(f"heartbeat failed: {err}")
 
 
+def compute_local_socket_snapshot() -> list[dict[str, Any]]:
+    try:
+        from services.socket_snapshot import compute_live_socket_state_snapshot
+    except ImportError:
+        from socket_snapshot import compute_live_socket_state_snapshot
+    return compute_live_socket_state_snapshot()
+
+
+def push_socket_overview(config: dict[str, Any]) -> None:
+    base_url = str(config["base_url"]).rstrip("/")
+    agent_token = str(config["agent_token"]).strip()
+    agent_name, _ = agent_identity(config)
+    overview_url = f"{base_url}/api/agent/socket-overview"
+    snapshot = compute_local_socket_snapshot()
+    request_json(
+        "POST",
+        overview_url,
+        agent_token,
+        {
+            "agent_name": agent_name,
+            "captured_at": datetime.now(UTC).isoformat(),
+            "snapshot": snapshot,
+        },
+    )
+    write_log(f"pushed socket overview: regions={len(snapshot)}")
+
+
+def maybe_push_socket_overview(config: dict[str, Any], *, force: bool = False) -> None:
+    global LAST_SOCKET_PUSH_AT
+    enabled = str(config.get("push_socket_overview", "1")).strip().lower() not in {"0", "false", "no"}
+    if not enabled:
+        return
+    interval_seconds = max(10, int(config.get("socket_overview_push_seconds", 20)))
+    now_monotonic = time.monotonic()
+    if not force and LAST_SOCKET_PUSH_AT and (now_monotonic - LAST_SOCKET_PUSH_AT) < interval_seconds:
+        return
+    try:
+        push_socket_overview(config)
+        LAST_SOCKET_PUSH_AT = now_monotonic
+    except urllib.error.HTTPError as err:
+        detail = err.read().decode("utf-8", errors="ignore")
+        write_log(f"push socket overview http error {err.code}: {detail}")
+    except Exception as err:
+        write_log(f"push socket overview failed: {err}")
+
+
 def run_local_runner(command: str, timeout_seconds: int, order: dict[str, Any]) -> tuple[bool, str, str]:
     raw_input = json.dumps(order, ensure_ascii=False)
     try:
@@ -139,6 +186,7 @@ def process_once(config: dict[str, Any]) -> bool:
         raise SystemExit("cloud_agent_config.json must contain base_url and agent_token")
 
     safe_send_heartbeat(config, status="IDLE")
+    maybe_push_socket_overview(config)
 
     claim_url = f"{base_url}/api/agent/orders/claim"
     write_log(f"claiming order from {claim_url}")
@@ -198,6 +246,7 @@ def main() -> int:
 
     write_log("cloud agent started")
     safe_send_heartbeat(config, status="IDLE")
+    maybe_push_socket_overview(config, force=True)
     if args.once:
         process_once(config)
         return 0
@@ -220,6 +269,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
-
-

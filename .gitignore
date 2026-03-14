@@ -30,6 +30,10 @@ runtime/**/tmp/
 runtime/**/cache/
 runtime/orders.db
 runtime/runner_screenshots/
+runtime/test_screen.png
+runtime/api_doc_extracted.txt
+runtime/mzf_index.js
+archive/pythonanywhere_db/
 
 # Local configs / secrets (commit *.example.json instead)
 config/cloud_agent_config.json
@@ -48,3 +52,6 @@ str
 dict\[str*
 list\[dict\[str*
 tuple\[*
+.aider*
+deploy/cloudflare_payment_bridge/.wrangler/
+Motrix-64-1.8.19.exe

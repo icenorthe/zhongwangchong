@@ -31,6 +31,7 @@
       </div>
       <div class="controls">
         <input id="token" placeholder="管理员口令（若已设置）">
+        <input id="password" type="password" placeholder="后台密码（若已设置）">
         <input id="deviceCode" placeholder="设备编码筛选">
         <select id="statusFilter">
           <option value="">全部状态</option>
@@ -98,6 +99,15 @@
           <input id="tokenAmount" placeholder="金额（例如：1、2、3、4）" style="max-width:260px;">
           <button id="issueToken" type="button">发放支付码</button>
         </div>
+        <div class="controls" style="margin-top:10px;">
+          <input id="manualBalanceAmount" placeholder="手动充值金额（可正可负）" style="max-width:260px;">
+          <input id="manualBalanceReason" placeholder="备注，例如：后台补单" style="max-width:260px;">
+          <button id="adjustBalance" type="button">手动充值余额</button>
+        </div>
+        <div class="controls" style="margin-top:10px;">
+          <input id="resetPasswordValue" type="password" placeholder="重置后的新密码" style="max-width:260px;">
+          <button id="resetPassword" type="button">重置用户密码</button>
+        </div>
         <div class="result" id="tokenResult" style="display:none;"></div>
         <div class="result" id="userResult" style="display:none;"></div>
       </div>
@@ -139,6 +149,7 @@
               <th>ID</th>
               <th>手机号</th>
               <th>金额</th>
+              <th>方式</th>
               <th>状态</th>
               <th>备注</th>
               <th>申请时间</th>
@@ -175,6 +186,7 @@
 
   <script>
     const tokenInput=document.getElementById("token");
+    const passwordInput=document.getElementById("password");
     const deviceCodeInput=document.getElementById("deviceCode");
     const statusFilter=document.getElementById("statusFilter");
     const meta=document.getElementById("meta");
@@ -182,6 +194,9 @@
     const userQuery=document.getElementById("userQuery");
     const selectedUserId=document.getElementById("selectedUserId");
     const tokenAmount=document.getElementById("tokenAmount");
+    const manualBalanceAmount=document.getElementById("manualBalanceAmount");
+    const manualBalanceReason=document.getElementById("manualBalanceReason");
+    const resetPasswordValue=document.getElementById("resetPasswordValue");
     const tokenResult=document.getElementById("tokenResult");
     const userResult=document.getElementById("userResult");
     const rechargeStatusFilter=document.getElementById("rechargeStatusFilter");
@@ -190,17 +205,19 @@
     tokenInput.value="__ADMIN_TOKEN__";
     let currentUserId=null;
 
-    function withToken(url){const token=tokenInput.value.trim();if(!token)return url;const u=new URL(url,window.location.origin);u.searchParams.set("token",token);return u.pathname+u.search}
+    function withToken(url){const token=tokenInput.value.trim();const password=passwordInput.value.trim();const u=new URL(url,window.location.origin);if(token)u.searchParams.set("token",token);if(password)u.searchParams.set("password",password);return u.pathname+u.search}
     function statusLabel(status){return ({SUCCESS:"成功",FAILED:"失败",PENDING:"待处理",PROCESSING:"处理中",APPROVED:"已通过",REJECTED:"已驳回"})[String(status||"").toUpperCase()]||String(status||"-")}
     async function requestJson(url,options){const resp=await fetch(withToken(url),options);const text=await resp.text();let data;try{data=text?JSON.parse(text):{}}catch{data={raw:text}}if(!resp.ok)throw new Error(data.detail||data.raw||`HTTP ${resp.status}`);return data}
     function showBox(el,text){el.style.display="block";el.textContent=text}
 
     async function searchUsers(){const q=(userQuery.value||"").trim();if(!q){showBox(userResult,"请输入手机号关键字。");return}const users=await requestJson(`/api/admin/users?q=${encodeURIComponent(q)}&limit=50`);if(!users.length){currentUserId=null;selectedUserId.textContent="-";showBox(userResult,"没有匹配到用户。");return}currentUserId=users[0].id;selectedUserId.textContent=String(currentUserId);showBox(userResult,users.map((u)=>`#${u.id} 手机号=${u.phone} 余额=${Number(u.balance_yuan||0).toFixed(2)}`).join("\n"))}
     async function issueToken(){if(!currentUserId){showBox(tokenResult,"请先搜索并选定一个用户。");return}const amt=Number(tokenAmount.value||"0");if(!Number.isFinite(amt)||amt<=0){showBox(tokenResult,"请输入正确金额。");return}const data=await requestJson("/api/admin/payments/issue",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({user_id:currentUserId,amount_yuan:amt})});showBox(tokenResult,`支付码：${data.token||""}\n过期时间：${data.expires_at||"-"}\n金额：¥${amt.toFixed(2)}`)}
+    async function adjustBalance(){if(!currentUserId){showBox(tokenResult,"请先搜索并选定一个用户。");return}const amt=Number(manualBalanceAmount.value||"0");if(!Number.isFinite(amt)||amt===0){showBox(tokenResult,"请输入正确的充值金额。");return}const reason=(manualBalanceReason.value||"").trim()||"admin_adjust";const data=await requestJson(`/api/admin/users/${currentUserId}/balance`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({delta_yuan:amt,reason})});showBox(tokenResult,`余额已调整：${amt>0?"+":""}${amt.toFixed(2)}\n当前余额：¥${Number(data.balance_yuan||0).toFixed(2)}`);await refreshAll()}
+    async function resetPassword(){if(!currentUserId){showBox(tokenResult,"请先搜索并选定一个用户。");return}const newPassword=(resetPasswordValue.value||"").trim();if(newPassword.length<6){showBox(tokenResult,"请输入至少6位的新密码。");return}const data=await requestJson(`/api/admin/users/${currentUserId}/password`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({new_password:newPassword})});resetPasswordValue.value="";showBox(tokenResult,`已重置用户密码：#${data.user_id}\n手机号：${data.phone||"-"}\n新密码已生效。`)}
     function setStats(stats){document.getElementById("s_total").textContent=stats.total??0;document.getElementById("s_pending").textContent=stats.pending??0;document.getElementById("s_processing").textContent=stats.processing??0;document.getElementById("s_success").textContent=stats.success??0;document.getElementById("s_failed").textContent=stats.failed??0;document.getElementById("s_recharge_pending").textContent=stats.recharge_pending??0;document.getElementById("tokenSection").style.display=(stats.payment_mode==="token"?"grid":"none");meta.textContent=`网关模式：${stats.gateway_mode||"-"} | 支付模式：${stats.payment_mode||"-"} | 最新刷新：${new Date().toLocaleString()}`}
     function renderUsers(users){if(!users.length){userTbody.innerHTML='<tr><td colspan="4" class="muted">暂无注册账号</td></tr>';return}userTbody.innerHTML=users.map((u)=>`<tr><td>${u.id}</td><td>${u.phone}</td><td>¥${Number(u.balance_yuan||0).toFixed(2)}</td><td>${new Date(u.created_at).toLocaleString()}</td></tr>`).join("")}
-    function renderOrders(orders){if(!orders.length){tbody.innerHTML='<tr><td colspan="11" class="muted">暂无订单</td></tr>';return}tbody.innerHTML=orders.map((o)=>`<tr><td>${o.id}</td><td>${o.phone||"-"}</td><td>${o.station_name||"-"}</td><td>${o.device_code}</td><td>${o.socket_no}号</td><td>¥${Number(o.amount_yuan).toFixed(2)}</td><td><span class="status ${o.status}">${statusLabel(o.status)}</span></td><td>${o.result_message||"-"}</td><td>${o.vendor_order_id||"-"}</td><td>${new Date(o.created_at).toLocaleString()}</td><td>${o.status==="FAILED"?`<button class="secondary" onclick="retryOrder(${o.id})">重试</button>`:"-"}</td></tr>`).join("")}
-    function renderRechargeRequests(rows){if(!rows.length){rechargeTbody.innerHTML='<tr><td colspan="8" class="muted">暂无充值申请</td></tr>';return}rechargeTbody.innerHTML=rows.map((r)=>`<tr><td>${r.id}</td><td>${r.phone||r.user_id}</td><td>¥${Number(r.amount_yuan).toFixed(2)}</td><td><span class="status ${r.status}">${statusLabel(r.status)}</span></td><td>${r.note||"-"}</td><td>${new Date(r.created_at).toLocaleString()}</td><td>${r.review_note||"-"}</td><td>${r.status==="PENDING"?`<button class="secondary" onclick="reviewRechargeRequest(${r.id}, true)">通过</button> <button class="secondary" onclick="reviewRechargeRequest(${r.id}, false)">驳回</button>`:"-"}</td></tr>`).join("")}
+    function renderOrders(orders){if(!orders.length){tbody.innerHTML='<tr><td colspan="11" class="muted">暂无订单</td></tr>';return}tbody.innerHTML=orders.map((o)=>`<tr><td>${o.id}</td><td>${o.phone||"-"}</td><td>${o.station_name||"-"}</td><td>${o.device_code}</td><td>${o.socket_no}号</td><td>¥${Number(o.total_cost_yuan||o.amount_yuan).toFixed(2)}</td><td><span class="status ${o.status}">${statusLabel(o.status)}</span></td><td>${o.result_message||"-"}</td><td>${o.vendor_order_id||"-"}</td><td>${new Date(o.created_at).toLocaleString()}</td><td>${o.status==="FAILED"?`<button class="secondary" onclick="retryOrder(${o.id})">重试</button>`:"-"}</td></tr>`).join("")}
+    function renderRechargeRequests(rows){const methodLabel={alipay_auto:'支付宝自动充值',wechat_manual:'微信手动充值',wxpay:'微信手动充值',wxpay_auto:'微信在线充值',alipay:'支付宝自动充值',manual_transfer:'手动付款待审核'};if(!rows.length){rechargeTbody.innerHTML='<tr><td colspan="9" class="muted">暂无充值申请</td></tr>';return}rechargeTbody.innerHTML=rows.map((r)=>`<tr><td>${r.id}</td><td>${r.phone||r.user_id}</td><td>¥${Number(r.amount_yuan).toFixed(2)}${Number(r.bonus_yuan||0)>0?` + 赠送¥${Number(r.bonus_yuan).toFixed(2)}`:""}</td><td>${methodLabel[r.payment_method]||r.payment_method||"-"}</td><td><span class="status ${r.status}">${statusLabel(r.status)}</span></td><td>${r.note||"-"}</td><td>${new Date(r.created_at).toLocaleString()}</td><td>${r.review_note||"-"}</td><td>${r.status==="PENDING"?`<button class="secondary" onclick="reviewRechargeRequest(${r.id}, true)">通过</button> <button class="secondary" onclick="reviewRechargeRequest(${r.id}, false)">驳回</button>`:"-"}</td></tr>`).join("")}
     async function reviewRechargeRequest(id,approve){const reviewNote=window.prompt("审核说明（可选）")||"";const action=approve?"approve":"reject";await requestJson(`/api/admin/recharge-requests/${id}/${action}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({review_note:reviewNote})});await refreshAll()}
     async function retryOrder(id){await requestJson(`/api/admin/orders/${id}/retry`,{method:"POST"});await refreshAll()}
     async function reloadGateway(){await requestJson("/api/admin/reload-gateway",{method:"POST"});await refreshAll()}
@@ -210,6 +227,8 @@
     statusFilter.onchange=refreshAll;rechargeStatusFilter.onchange=refreshAll;deviceCodeInput.onchange=refreshAll;
     document.getElementById("searchUsers").onclick=()=>searchUsers().catch((e)=>showBox(userResult,e.message));
     document.getElementById("issueToken").onclick=()=>issueToken().catch((e)=>showBox(tokenResult,e.message));
+    document.getElementById("adjustBalance").onclick=()=>adjustBalance().catch((e)=>showBox(tokenResult,e.message));
+    document.getElementById("resetPassword").onclick=()=>resetPassword().catch((e)=>showBox(tokenResult,e.message));
     refreshAll();setInterval(refreshAll,5000);
   </script>
 </body>

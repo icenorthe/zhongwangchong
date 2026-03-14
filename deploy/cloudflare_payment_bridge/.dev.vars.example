@@ -1,7 +1,24 @@
 CODEPAY_ID=replace-with-provider-id
 CODEPAY_KEY=replace-with-provider-key
-CODEPAY_API_BASE=https://codepay.upaypro.com
+CODEPAY_API_BASE=https://pay.example.com
+
+# Comma-separated: wxpay,alipay
+PAYMENT_PAY_TYPES=wxpay
+
+# Optional channel routing (depends on your provider account)
+CODEPAY_CHANNEL_ID=
+CODEPAY_CHANNEL_ID_WXPAY=
+CODEPAY_CHANNEL_ID_ALIPAY=
+
+# Optional provider compat switches (defaults match XPay/EPay style)
+PROVIDER_CREATE_PATH=/xpay/epay/mapi.php
+PROVIDER_QUERY_PATH=/xpay/epay/api.php
+PROVIDER_SIGN_MODE=concat
 PYTHONANYWHERE_BASE_URL=https://icenorth.pythonanywhere.com
 PYTHONANYWHERE_ADMIN_TOKEN=replace-with-admin-token
 RETURN_URL=https://icenorth.pythonanywhere.com/
 
+# Realtime socket overview
+# Worker will call:
+#   1) <PYTHONANYWHERE_BASE_URL>/api/admin/realtime-snapshot-config
+#   2) Official realtime APIs on wx.jwnzn.com

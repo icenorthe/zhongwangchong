@@ -8,8 +8,11 @@ PENDING status until a local agent claims them later.
 from __future__ import annotations
 
 import json
+import sys
 import os
 from pathlib import Path
+
+sys.path.insert(0, '/home/icenorth/zhongwang-charge')
 
 try:
     from services.project_paths import CONFIG_DIR
@@ -25,12 +28,16 @@ if SECRETS_PATH.exists():
     if isinstance(data, dict):
         for env_name in (
             "ADMIN_TOKEN",
+            "ADMIN_PASSWORD",
             "AGENT_TOKEN",
             "WORKER_ENABLED",
             "REQUIRE_AGENT_ONLINE_FOR_ORDERS",
             "AGENT_HEARTBEAT_EXPIRE_SECONDS",
             "PAYMENT_MODE",
             "PAYMENT_BRIDGE_URL",
+            "SOCKET_OVERVIEW_BRIDGE_URL",
+            "MANUAL_PAYMENT_CONTACT",
+            "MANUAL_PAYMENT_INSTRUCTIONS",
             "PAYMENT_TOKEN_SECRET",
             "PAYMENT_TOKEN_TTL_SECONDS",
             "BALANCE_REFUND_ON_FAIL",

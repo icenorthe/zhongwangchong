@@ -24,6 +24,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 import hashlib
@@ -36,20 +37,28 @@ from pydantic import BaseModel, Field
 
 try:
     from services.project_paths import CONFIG_DIR, RUNTIME_DIR, WEB_ASSETS_DIR
+    from services.realtime_http import post_form_json as realtime_post_form_json
 except ImportError:
     from project_paths import CONFIG_DIR, RUNTIME_DIR, WEB_ASSETS_DIR
+    from realtime_http import post_form_json as realtime_post_form_json
 
 DB_PATH = RUNTIME_DIR / "orders.db"
 HTML_PATH = WEB_ASSETS_DIR / "mobile_order.html"
 ADMIN_HTML_PATH = WEB_ASSETS_DIR / "admin_orders.html"
 GATEWAY_CONFIG_PATH = CONFIG_DIR / "gateway_config.json"
+CHARGE_API_CONFIG_PATH = CONFIG_DIR / "charge_api_config.json"
 STATIONS_PATH = CONFIG_DIR / "stations.json"
+STATION_PLACEHOLDERS_PATH = CONFIG_DIR / "station_placeholders.json"
 POLL_INTERVAL_SECONDS = float(os.getenv("ORDER_POLL_INTERVAL_SECONDS", "2"))
 ADMIN_TOKEN = os.getenv("ADMIN_TOKEN", "")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "").strip()
 AGENT_TOKEN = os.getenv("AGENT_TOKEN", "")
 WORKER_ENABLED = os.getenv("WORKER_ENABLED", "1").lower() not in {"0", "false", "no"}
 SESSION_EXPIRE_DAYS = int(os.getenv("SESSION_EXPIRE_DAYS", "30"))
 AGENT_HEARTBEAT_EXPIRE_SECONDS = max(15, int(os.getenv("AGENT_HEARTBEAT_EXPIRE_SECONDS", "45")))
+AGENT_SOCKET_OVERVIEW_EXPIRE_SECONDS = max(
+    15, int(os.getenv("AGENT_SOCKET_OVERVIEW_EXPIRE_SECONDS", "90"))
+)
 REQUIRE_AGENT_ONLINE_FOR_ORDERS = os.getenv("REQUIRE_AGENT_ONLINE_FOR_ORDERS", "0").lower() in {
     "1",
     "true",
@@ -57,6 +66,7 @@ REQUIRE_AGENT_ONLINE_FOR_ORDERS = os.getenv("REQUIRE_AGENT_ONLINE_FOR_ORDERS", "
 }
 PAYMENT_MODE = os.getenv("PAYMENT_MODE", "disabled").strip().lower()
 PAYMENT_BRIDGE_URL = os.getenv("PAYMENT_BRIDGE_URL", "").strip()
+SOCKET_OVERVIEW_BRIDGE_URL = os.getenv("SOCKET_OVERVIEW_BRIDGE_URL", "").strip()
 PAYMENT_TOKEN_SECRET = os.getenv("PAYMENT_TOKEN_SECRET", "").strip()
 PAYMENT_TOKEN_TTL_SECONDS = int(os.getenv("PAYMENT_TOKEN_TTL_SECONDS", "900"))
 BALANCE_REFUND_ON_FAIL = os.getenv("BALANCE_REFUND_ON_FAIL", "1").lower() in {"1", "true", "yes"}
@@ -69,14 +79,44 @@ CODEPAY_KEY = os.getenv("CODEPAY_KEY", "").strip()
 CODEPAY_API = os.getenv("CODEPAY_API", "").strip().rstrip("/")
 CODEPAY_ENABLED = bool(CODEPAY_ID and CODEPAY_KEY and CODEPAY_API)
 SERVICE_FEE_YUAN = float(os.getenv("SERVICE_FEE_YUAN", "1.0"))
+RECHARGE_BONUS_RULES = (
+    (20.0, 5.0),
+    (10.0, 2.0),
+)
 
 MINUTES_PER_YUAN = 207
 DEFAULT_RECHARGE_QR_NOTE = "线下付款后提交充值申请，管理员确认到账后补余额。"
+MANUAL_PAYMENT_CONTACT = os.getenv("MANUAL_PAYMENT_CONTACT", "").strip()
+MANUAL_PAYMENT_INSTRUCTIONS = os.getenv("MANUAL_PAYMENT_INSTRUCTIONS", "").strip()
+REALTIME_STATUS_TIMEOUT_SECONDS = max(2.0, float(os.getenv("REALTIME_STATUS_TIMEOUT_SECONDS", "10")))
+REALTIME_STATUS_MAX_WORKERS = max(1, int(os.getenv("REALTIME_STATUS_MAX_WORKERS", "4")))
+REALTIME_PARSECK_URL = "https://wx.jwnzn.com/mini_jwnzn/miniapp/mp_parseCk.action"
+REALTIME_USING_ORDERS_URL = "https://wx.jwnzn.com/mini_jwnzn/miniapp/mp_pileUsingOrders.action"
+REALTIME_API_HEADERS = {
+    "Content-Type": "application/x-www-form-urlencoded",
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36 "
+        "MicroMessenger/7.0.20.1781(0x6700143B) NetType/WIFI "
+        "MiniProgramEnv/Windows WindowsWechat/WMPF"
+    ),
+    "Authorization": "",
+}
+REALTIME_STATION_CACHE_SECONDS = max(30, int(os.getenv("REALTIME_STATION_CACHE_SECONDS", "180")))
+REALTIME_STATUS_SERIAL_RETRY_LIMIT = max(0, int(os.getenv("REALTIME_STATUS_SERIAL_RETRY_LIMIT", "12")))
+REALTIME_STATUS_SERIAL_RETRY_SECONDS = max(
+    0.0, float(os.getenv("REALTIME_STATUS_SERIAL_RETRY_SECONDS", "0.35"))
+)
 REGION_SORT_ORDER = {
     "综合楼": 1,
     "学术交流中心": 2,
     "东盟一号": 3,
+    "图书馆": 4,
+    "19栋": 5,
+    "19栋女生宿舍": 5,
 }
+HIDDEN_STATION_NUMBERS = {3, 46, 70}
+_station_realtime_cache: dict[str, dict[str, Any]] = {}
 
 
 def now_iso() -> str:
@@ -113,11 +153,31 @@ def infer_station_region(name: str, raw_region: str = "") -> str:
     return "未分区"
 
 
+def overview_region_key(raw_region: str) -> str:
+    region = str(raw_region or "").strip()
+    mapping = {
+        "综合楼": "图书馆",
+        "图书馆": "图书馆",
+        "东盟一号": "东盟",
+        "东盟": "东盟",
+        "学术交流中心": "学术交流中心",
+        "19栋": "19栋宿舍",
+        "19栋女生宿舍": "19栋宿舍",
+        "19栋宿舍": "19栋宿舍",
+    }
+    return mapping.get(region, region or "未分区")
+
+
 def station_number_from_name(name: str) -> int:
     match = re.search(r"(\d+)号站", name)
     if not match:
         return 9999
     return int(match.group(1))
+
+
+def station_hidden_from_web(name: str) -> bool:
+    station_no = station_number_from_name(name)
+    return station_no in HIDDEN_STATION_NUMBERS
 
 
 def normalize_disabled_sockets(item: dict[str, Any], socket_count: int) -> list[int]:
@@ -135,12 +195,100 @@ def normalize_disabled_sockets(item: dict[str, Any], socket_count: int) -> list[
     return sorted(disabled)
 
 
+def optional_int(value: Any) -> int | None:
+    if value in (None, ""):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def optional_text(value: Any) -> str:
+    return str(value or "").strip()
+
+
+def expand_number_spec(spec: str) -> list[int]:
+    values: set[int] = set()
+    for chunk in str(spec or "").split(","):
+        part = chunk.strip()
+        if not part:
+            continue
+        if "-" in part:
+            left, right = part.split("-", 1)
+            try:
+                start = int(left.strip())
+                end = int(right.strip())
+            except ValueError:
+                continue
+            if start > end:
+                start, end = end, start
+            for number in range(start, end + 1):
+                values.add(number)
+            continue
+        try:
+            values.add(int(part))
+        except ValueError:
+            continue
+    return sorted(values)
+
+
+def load_station_placeholders() -> list[dict[str, Any]]:
+    if not STATION_PLACEHOLDERS_PATH.exists():
+        return []
+    try:
+        raw = STATION_PLACEHOLDERS_PATH.read_text(encoding="utf-8-sig")
+        data = json.loads(raw)
+    except Exception:
+        return []
+    if not isinstance(data, list):
+        return []
+
+    placeholders: list[dict[str, Any]] = []
+    default_address = "四川省成都市龙泉驿区十陵街道成都大学"
+    for item in data:
+        if not isinstance(item, dict):
+            continue
+        region = optional_text(item.get("region"))
+        name_template = optional_text(item.get("name_template"))
+        number_spec = optional_text(item.get("station_numbers"))
+        if not region or not name_template or not number_spec:
+            continue
+        address = optional_text(item.get("address")) or default_address
+        source = optional_text(item.get("source")) or "user-provided-list"
+        socket_count = optional_int(item.get("socket_count")) or 10
+        socket_count = max(1, min(socket_count, 20))
+        for number in expand_number_spec(number_spec):
+            placeholders.append(
+                {
+                    "id": f"cd-{number}",
+                    "region": region,
+                    "sort_order": number,
+                    "name": name_template.replace("{n}", str(number)),
+                    "device_code": "",
+                    "socket_count": socket_count,
+                    "disabled_sockets": [],
+                    "address": address,
+                    "source": source,
+                }
+            )
+    return placeholders
+
+
 def approx_charge_minutes(amount_yuan: float) -> int:
     return max(0, int(round(float(amount_yuan) * MINUTES_PER_YUAN)))
 
 
 def total_cost_yuan(amount_yuan: float) -> float:
     return round(float(amount_yuan) + SERVICE_FEE_YUAN, 2)
+
+
+def recharge_bonus_yuan(amount_yuan: float) -> float:
+    amount = float(amount_yuan or 0)
+    for threshold, bonus in RECHARGE_BONUS_RULES:
+        if amount + 1e-9 >= threshold:
+            return bonus
+    return 0.0
 
 
 def estimated_finish_at(created_at: str, amount_yuan: float) -> str:
@@ -162,6 +310,14 @@ def charge_state_for_order(status: str, estimated_finish: str) -> tuple[str, str
             return "ENDED_ESTIMATED", estimated_finish
         return "CHARGING_ESTIMATED", ""
     return normalized, ""
+
+
+def charge_stop_reason_from_message(message: Any) -> str:
+    text = clean_result_message(message).strip()
+    for reason in ("过充", "充电被拔", "被拔", "空载"):
+        if reason in text:
+            return "充电被拔" if reason == "被拔" else reason
+    return ""
 
 
 def clean_result_message(message: Any, status: str = "") -> str:
@@ -266,32 +422,67 @@ def load_stations() -> list[dict[str, Any]]:
     data = json.loads(raw)
     if not isinstance(data, list):
         return []
+    merged_data = list(data) + load_station_placeholders()
     stations: list[dict[str, Any]] = []
-    for item in data:
+    seen_ids: set[str] = set()
+    seen_numbers: set[int] = set()
+    for item in merged_data:
         if not isinstance(item, dict):
             continue
         name = str(item.get("name", "")).strip()
         device_code = str(item.get("device_code", item.get("sn", ""))).strip()
-        if not name or not device_code:
+        if not name:
             continue
-        station_id = str(item.get("id", device_code)).strip()
+        if station_hidden_from_web(name):
+            continue
+        fallback_id = f"station-{station_number_from_name(name)}"
+        station_id = str(item.get("id", device_code or fallback_id)).strip()
         socket_count = int(item.get("socket_count", item.get("total", 10)) or 10)
         socket_count = max(1, min(socket_count, 20))
         address = str(item.get("address", "")).strip()
         region = infer_station_region(name, str(item.get("region", "")))
+        sort_order = int(item.get("sort_order", station_number_from_name(name)))
+        if station_id in seen_ids or sort_order in seen_numbers:
+            continue
         disabled_sockets = normalize_disabled_sockets(item, socket_count)
-        stations.append(
-            {
-                "id": station_id,
-                "name": name,
-                "device_code": device_code,
-                "socket_count": socket_count,
-                "address": address,
-                "region": region,
-                "sort_order": int(item.get("sort_order", station_number_from_name(name))),
-                "disabled_sockets": disabled_sockets,
-            }
-        )
+        station = {
+            "id": station_id,
+            "name": name,
+            "device_code": device_code,
+            "socket_count": socket_count,
+            "address": address,
+            "region": region,
+            "sort_order": sort_order,
+            "disabled_sockets": disabled_sockets,
+            "order_enabled": bool(device_code),
+        }
+        for field, aliases in {
+            "plot_id": ("plot_id", "plotId"),
+            "gps_id": ("gps_id", "gpsId"),
+            "agent_id": ("agent_id", "agentId"),
+            "pid": ("pid",),
+        }.items():
+            value = None
+            for alias in aliases:
+                value = optional_int(item.get(alias))
+                if value is not None:
+                    break
+            if value is not None:
+                station[field] = value
+        for field, aliases in {
+            "device_ck": ("device_ck", "deviceCk"),
+            "source": ("source",),
+        }.items():
+            value = ""
+            for alias in aliases:
+                value = optional_text(item.get(alias))
+                if value:
+                    break
+            if value:
+                station[field] = value
+        seen_ids.add(station_id)
+        seen_numbers.add(sort_order)
+        stations.append(station)
     stations.sort(
         key=lambda item: (
             REGION_SORT_ORDER.get(item["region"], 99),
@@ -300,6 +491,317 @@ def load_stations() -> list[dict[str, Any]]:
         )
     )
     return stations
+
+
+def load_charge_api_config() -> dict[str, Any]:
+    if not CHARGE_API_CONFIG_PATH.exists():
+        return {}
+    try:
+        raw = CHARGE_API_CONFIG_PATH.read_text(encoding="utf-8-sig")
+        data = json.loads(raw)
+    except Exception:
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    return data
+
+
+def post_form_json(url: str, payload: dict[str, Any], timeout: float = REALTIME_STATUS_TIMEOUT_SECONDS) -> dict[str, Any]:
+    return realtime_post_form_json(
+        url,
+        payload,
+        REALTIME_API_HEADERS,
+        timeout=timeout,
+    )
+
+
+def cache_station_realtime(device_code: str, result: dict[str, Any]) -> None:
+    if not device_code or not result.get("ok"):
+        return
+    _station_realtime_cache[device_code] = {
+        "cached_at": time.time(),
+        "result": json.loads(json.dumps(result, ensure_ascii=False)),
+    }
+
+
+def cached_station_realtime(device_code: str) -> dict[str, Any] | None:
+    cached = _station_realtime_cache.get(device_code)
+    if not cached:
+        return None
+    if (time.time() - float(cached.get("cached_at", 0))) > REALTIME_STATION_CACHE_SECONDS:
+        _station_realtime_cache.pop(device_code, None)
+        return None
+    result = cached.get("result")
+    if not isinstance(result, dict):
+        return None
+    data = json.loads(json.dumps(result, ensure_ascii=False))
+    message = optional_text(data.get("message"))
+    data["message"] = "实时接口短暂异常，已回退最近成功快照" if not message else f"{message}（已回退最近成功快照）"
+    data["cached"] = True
+    return data
+
+
+def should_serial_retry_realtime_error(err: BaseException) -> bool:
+    text = str(err or "").lower()
+    markers = (
+        "unexpected eof while reading",
+        "eof occurred in violation of protocol",
+        "timed out",
+        "connection reset by peer",
+        "remote end closed connection",
+        "handshake operation timed out",
+    )
+    return any(marker in text for marker in markers)
+
+
+def configured_member_id() -> str:
+    return optional_text(load_charge_api_config().get("member_id"))
+
+
+def fetch_using_orders(member_id: str) -> tuple[dict[tuple[str, int], dict[str, Any]], str]:
+    if not member_id:
+        return {}, "配置缺少 member_id"
+    payload = post_form_json(
+        REALTIME_USING_ORDERS_URL,
+        {"memberId": member_id, "miniAppType": "1"},
+    )
+    using_orders: dict[tuple[str, int], dict[str, Any]] = {}
+    raw_rows = payload.get("usingOrders")
+    if isinstance(raw_rows, list):
+        for item in raw_rows:
+            if not isinstance(item, dict):
+                continue
+            device_code = optional_text(item.get("sn"))
+            socket_no = optional_int(item.get("sid"))
+            if not device_code or socket_no is None or socket_no <= 0:
+                continue
+            start_time = optional_text(item.get("startTime"))
+            # Official API fields may vary. We keep a human-friendly detail and also pass through
+            # end/remaining time when available so the frontend can render a countdown.
+            detail = f"开始时间：{start_time}" if start_time else ""
+            end_time = optional_text(
+                item.get("endTime")
+                or item.get("finishTime")
+                or item.get("stopTime")
+                or item.get("end_time")
+                or item.get("finish_time")
+                or item.get("stop_time")
+            )
+            remain_seconds = optional_int(
+                item.get("remainSeconds")
+                or item.get("leftSeconds")
+                or item.get("remainingSeconds")
+                or item.get("surplusSeconds")
+                or item.get("remain_seconds")
+                or item.get("left_seconds")
+                or item.get("remaining_seconds")
+            )
+            using_orders[(device_code, socket_no)] = {
+                "status": "使用中",
+                "detail": detail,
+                "station_name": optional_text(item.get("devName")),
+                "start_time": start_time,
+                "end_time": end_time,
+                "remain_seconds": remain_seconds,
+            }
+    return using_orders, optional_text(payload.get("msg"))
+
+
+def fetch_station_realtime(station: dict[str, Any], member_id: str) -> dict[str, Any]:
+    device_ck = optional_text(station.get("device_ck"))
+    if not member_id:
+        return {"ok": False, "message": "配置缺少 member_id", "products": []}
+    if not device_ck:
+        return {"ok": False, "message": "缺少 device_ck", "products": []}
+    payload = post_form_json(
+        REALTIME_PARSECK_URL,
+        {
+            "ck": device_ck,
+            "memberId": member_id,
+            "miniAppType": "1",
+        },
+    )
+    raw_products = payload.get("products")
+    products = raw_products if isinstance(raw_products, list) else []
+    ok = int(payload.get("normal", 0) or 0) == 1 and bool(products)
+    message = optional_text(payload.get("msg"))
+    if ok:
+        return {"ok": True, "message": message, "products": products}
+    if not message:
+        message = "实时接口未返回插座状态"
+    return {"ok": False, "message": message, "products": products}
+
+
+def unknown_socket(socket_no: int, detail: str) -> dict[str, Any]:
+    return {"socket_no": socket_no, "status": "未查询到", "detail": detail}
+
+
+def disabled_socket(socket_no: int) -> dict[str, Any]:
+    return {"socket_no": socket_no, "status": "故障", "detail": "已标记故障"}
+
+
+def format_using_order_detail(snapshot: dict[str, Any]) -> str:
+    return optional_text(snapshot.get("detail"))
+
+
+def socket_status_from_product(
+    station: dict[str, Any],
+    socket_no: int,
+    product: dict[str, Any],
+    using_orders: dict[tuple[str, int], dict[str, Any]],
+) -> dict[str, Any]:
+    state = optional_int(product.get("state"))
+    if state == 0:
+        return {"socket_no": socket_no, "status": "空闲", "detail": ""}
+    if state == 1:
+        snapshot = using_orders.get((str(station["device_code"]), socket_no))
+        detail = format_using_order_detail(snapshot or {})
+        data: dict[str, Any] = {"socket_no": socket_no, "status": "使用中", "detail": detail}
+        if snapshot:
+            # Pass-through optional countdown fields for the UI.
+            for key in ("start_time", "end_time", "remain_seconds"):
+                if snapshot.get(key) not in (None, ""):
+                    data[key] = snapshot.get(key)
+        return data
+    return unknown_socket(socket_no, f"未知状态: {product.get('state')}")
+
+
+def build_station_sockets(
+    station: dict[str, Any],
+    station_result: dict[str, Any],
+    using_orders: dict[tuple[str, int], dict[str, Any]],
+) -> tuple[list[dict[str, Any]], str]:
+    disabled = {int(item) for item in station.get("disabled_sockets", [])}
+    socket_count = int(station.get("socket_count", 10))
+    device_code = str(station["device_code"])
+    products = station_result.get("products")
+    product_by_sid: dict[int, dict[str, Any]] = {}
+    if isinstance(products, list):
+        for product in products:
+            if not isinstance(product, dict):
+                continue
+            sid = optional_int(product.get("sid"))
+            if sid is None or sid <= 0:
+                continue
+            product_by_sid[sid] = product
+
+    fallback_detail = optional_text(station_result.get("message"))
+    sockets: list[dict[str, Any]] = []
+    for socket_no in range(1, socket_count + 1):
+        if socket_no in disabled:
+            sockets.append(disabled_socket(socket_no))
+            continue
+        product = product_by_sid.get(socket_no)
+        if product is not None and station_result.get("ok"):
+            sockets.append(socket_status_from_product(station, socket_no, product, using_orders))
+            continue
+        snapshot = using_orders.get((device_code, socket_no))
+        if snapshot is not None:
+            data: dict[str, Any] = {
+                "socket_no": socket_no,
+                "status": "使用中",
+                "detail": format_using_order_detail(snapshot),
+            }
+            for key in ("start_time", "end_time", "remain_seconds"):
+                if snapshot.get(key) not in (None, ""):
+                    data[key] = snapshot.get(key)
+            sockets.append(data)
+            continue
+        if station_result.get("ok"):
+            sockets.append(unknown_socket(socket_no, "实时接口未返回该插座"))
+        else:
+            sockets.append(unknown_socket(socket_no, ""))
+    return sockets, fallback_detail
+
+
+def compute_live_socket_state_snapshot(region_key: str | None = None) -> list[dict[str, Any]]:
+    stations = load_stations()
+    selected_region_key = overview_region_key(region_key) if region_key else ""
+    if selected_region_key:
+        stations = [
+            station
+            for station in stations
+            if overview_region_key(station.get("region", "")) == selected_region_key
+        ]
+    member_id = configured_member_id()
+    using_orders: dict[tuple[str, int], dict[str, Any]] = {}
+    using_orders_message = ""
+    realtime_by_device: dict[str, dict[str, Any]] = {}
+    serial_retry_candidates: list[dict[str, Any]] = []
+
+    if member_id:
+        try:
+            using_orders, using_orders_message = fetch_using_orders(member_id)
+        except Exception as err:
+            using_orders_message = f"实时接口异常: {err}"
+        realtime_candidates = [station for station in stations if optional_text(station.get("device_ck"))]
+        if realtime_candidates:
+            max_workers = min(REALTIME_STATUS_MAX_WORKERS, len(realtime_candidates))
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                future_to_station = {
+                    executor.submit(fetch_station_realtime, station, member_id): station for station in realtime_candidates
+                }
+                for future in as_completed(future_to_station):
+                    station = future_to_station[future]
+                    device_code = str(station["device_code"])
+                    try:
+                        result = future.result()
+                        realtime_by_device[device_code] = result
+                        cache_station_realtime(device_code, result)
+                    except Exception as err:
+                        cached = cached_station_realtime(device_code)
+                        if cached is not None:
+                            realtime_by_device[device_code] = cached
+                        else:
+                            realtime_by_device[device_code] = {
+                                "ok": False,
+                                "message": f"实时接口异常: {err}",
+                                "products": [],
+                            }
+                            if should_serial_retry_realtime_error(err):
+                                serial_retry_candidates.append(station)
+            if serial_retry_candidates:
+                for station in serial_retry_candidates[:REALTIME_STATUS_SERIAL_RETRY_LIMIT]:
+                    device_code = str(station["device_code"])
+                    try:
+                        result = fetch_station_realtime(station, member_id)
+                        realtime_by_device[device_code] = result
+                        cache_station_realtime(device_code, result)
+                    except Exception:
+                        pass
+                    if REALTIME_STATUS_SERIAL_RETRY_SECONDS > 0:
+                        time.sleep(REALTIME_STATUS_SERIAL_RETRY_SECONDS)
+
+    regions: dict[str, dict[str, Any]] = {}
+    for station in stations:
+        region_name = str(station["region"])
+        region = regions.setdefault(region_name, {"region": region_name, "stations": []})
+        has_using_order = any(device_code == str(station["device_code"]) for device_code, _ in using_orders)
+        station_result = realtime_by_device.get(str(station["device_code"]))
+        if station_result is None:
+            if not member_id:
+                station_result = {"ok": False, "message": "配置缺少 member_id", "products": []}
+            elif not optional_text(station.get("device_code")):
+                station_result = {"ok": False, "message": "仅录入站号，缺少 device_code / device_ck", "products": []}
+            elif optional_text(station.get("device_ck")):
+                station_result = {"ok": False, "message": "实时接口未返回结果", "products": []}
+            elif has_using_order:
+                station_result = {"ok": False, "message": "缺少 device_ck；仅能识别当前账号充电中的插座", "products": []}
+            else:
+                station_result = {"ok": False, "message": "缺少 device_ck", "products": []}
+        sockets, query_message = build_station_sockets(station, station_result, using_orders)
+        region["stations"].append(
+            {
+                "id": station["id"],
+                "name": station["name"],
+                "device_code": station["device_code"],
+                "region": region_name,
+                "query_message": query_message if (not station_result.get("ok") or station_result.get("cached")) else "",
+                "realtime_ok": bool(station_result.get("ok")),
+                "sockets": sockets,
+            }
+        )
+    return list(regions.values())
 
 
 def db_connect() -> sqlite3.Connection:
@@ -369,6 +871,16 @@ def init_db() -> None:
         )
         conn.execute(
             """
+            CREATE TABLE IF NOT EXISTS agent_socket_overview (
+                agent_name TEXT PRIMARY KEY,
+                snapshot_json TEXT NOT NULL DEFAULT '',
+                captured_at TEXT NOT NULL DEFAULT '',
+                updated_at TEXT NOT NULL
+            )
+            """
+        )
+        conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS payment_tokens (
                 token TEXT PRIMARY KEY,
                 user_id INTEGER NOT NULL,
@@ -423,6 +935,7 @@ def init_db() -> None:
                 phone TEXT NOT NULL DEFAULT '',
                 amount_yuan REAL NOT NULL,
                 status TEXT NOT NULL DEFAULT 'PENDING',
+                payment_method TEXT NOT NULL DEFAULT '',
                 note TEXT NOT NULL DEFAULT '',
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL,
@@ -434,6 +947,7 @@ def init_db() -> None:
         )
         ensure_user_columns(conn)
         ensure_order_columns(conn)
+        ensure_recharge_request_columns(conn)
         conn.commit()
 
 
@@ -467,6 +981,17 @@ def ensure_order_columns(conn: sqlite3.Connection) -> None:
             conn.execute(f"ALTER TABLE orders ADD COLUMN {column_name} {column_type}")
 
 
+def ensure_recharge_request_columns(conn: sqlite3.Connection) -> None:
+    required_columns = {
+        "payment_method": "TEXT NOT NULL DEFAULT ''",
+    }
+    rows = conn.execute("PRAGMA table_info(recharge_requests)").fetchall()
+    existing = {row["name"] for row in rows}
+    for column_name, column_type in required_columns.items():
+        if column_name not in existing:
+            conn.execute(f"ALTER TABLE recharge_requests ADD COLUMN {column_name} {column_type}")
+
+
 def row_to_dict(row: sqlite3.Row) -> dict[str, Any]:
     created_at = str(row["created_at"] or "")
     amount_yuan = float(row["amount_yuan"] or 0)
@@ -490,6 +1015,7 @@ def row_to_dict(row: sqlite3.Row) -> dict[str, Any]:
         "estimated_finish_at": estimated_finish,
         "charge_state": charge_state,
         "charge_finished_at": charge_finished_at,
+        "charge_stop_reason": charge_stop_reason_from_message(row["result_message"]),
         "service_fee_yuan": SERVICE_FEE_YUAN,
         "total_cost_yuan": total_cost_yuan(amount_yuan),
     }
@@ -523,6 +1049,7 @@ class OrderView(BaseModel):
     estimated_finish_at: str = ""
     charge_state: str = ""
     charge_finished_at: str = ""
+    charge_stop_reason: str = ""
     service_fee_yuan: float = 0
     total_cost_yuan: float = 0
 
@@ -554,6 +1081,10 @@ class BalanceAdjustPayload(BaseModel):
     reason: str = Field(default="", max_length=200)
 
 
+class PasswordResetPayload(BaseModel):
+    new_password: str = Field(min_length=6, max_length=64)
+
+
 class PaymentIssuePayload(BaseModel):
     user_id: int
     amount_yuan: float = Field(gt=0, le=10000)
@@ -573,6 +1104,12 @@ class AgentHeartbeatPayload(BaseModel):
     current_order_id: int | None = None
 
 
+class AgentSocketOverviewPayload(BaseModel):
+    agent_name: str = Field(min_length=1, max_length=120)
+    captured_at: str = Field(default="")
+    snapshot: list[dict[str, Any]] = Field(default_factory=list)
+
+
 class StationView(BaseModel):
     id: str
     name: str
@@ -581,10 +1118,34 @@ class StationView(BaseModel):
     socket_count: int = 10
     address: str = ""
     disabled_sockets: list[int] = Field(default_factory=list)
+    order_enabled: bool = True
+    plot_id: int | None = None
+    gps_id: int | None = None
+    agent_id: int | None = None
+    pid: int | None = None
+    device_ck: str = ""
+    source: str = ""
+
+
+class StationPublicView(BaseModel):
+    id: str
+    name: str
+    region: str = ""
+    device_code: str
+    socket_count: int = 10
+    address: str = ""
+    disabled_sockets: list[int] = Field(default_factory=list)
+    order_enabled: bool = True
+    plot_id: int | None = None
+    gps_id: int | None = None
+    agent_id: int | None = None
+    pid: int | None = None
+    source: str = ""
 
 
 class RechargeRequestCreate(BaseModel):
     amount_yuan: float = Field(gt=0, le=10000)
+    payment_method: str = Field(default="wechat_manual", max_length=40)
     note: str = Field(default="", max_length=200)
 
 
@@ -597,6 +1158,9 @@ class RechargeRequestView(BaseModel):
     user_id: int
     phone: str
     amount_yuan: float
+    bonus_yuan: float = 0
+    credited_yuan: float = 0
+    payment_method: str = ""
     status: str
     note: str
     created_at: str
@@ -818,15 +1382,42 @@ async def lifespan(_: FastAPI):
 app = FastAPI(title="Mobile Charger Order Service", version="1.0.0", lifespan=lifespan)
 
 
+@app.middleware("http")
+async def add_security_headers(request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+    response.headers["Cache-Control"] = "no-store" if request.url.path.startswith("/admin") else "no-cache"
+    if "Content-Security-Policy" not in response.headers:
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self' https: data: blob:; "
+            "img-src 'self' https: data: blob:; "
+            "style-src 'self' 'unsafe-inline' https:; "
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; "
+            "frame-src 'self' https:; "
+            "connect-src 'self' https:; "
+            "object-src 'none'; base-uri 'self'; form-action 'self' https:;"
+        )
+    return response
+
+
 def require_admin(
     x_admin_token: str | None = Header(default=None, alias="X-Admin-Token"),
+    x_admin_password: str | None = Header(default=None, alias="X-Admin-Password"),
     token: str | None = Query(default=None),
+    password: str | None = Query(default=None),
 ) -> None:
     if not ADMIN_TOKEN:
         raise HTTPException(status_code=403, detail="admin token not configured")
     candidate = x_admin_token or token
     if candidate != ADMIN_TOKEN:
         raise HTTPException(status_code=401, detail="invalid admin token")
+    if ADMIN_PASSWORD:
+        password_candidate = (x_admin_password or password or "").strip()
+        if password_candidate != ADMIN_PASSWORD:
+            raise HTTPException(status_code=401, detail="invalid admin password")
 
 
 def require_agent(
@@ -990,11 +1581,16 @@ def validate_station_socket(station: dict[str, Any], socket_no: int) -> None:
 
 
 def recharge_request_row_to_dict(row: sqlite3.Row) -> dict[str, Any]:
+    amount_yuan = float(row["amount_yuan"] or 0)
+    bonus_yuan = recharge_bonus_yuan(amount_yuan)
     return {
         "id": int(row["id"]),
         "user_id": int(row["user_id"]),
         "phone": str(row["phone"] or ""),
-        "amount_yuan": float(row["amount_yuan"] or 0),
+        "amount_yuan": amount_yuan,
+        "bonus_yuan": bonus_yuan,
+        "credited_yuan": round(amount_yuan + bonus_yuan, 2),
+        "payment_method": str(row["payment_method"] or ""),
         "status": str(row["status"] or ""),
         "note": str(row["note"] or ""),
         "created_at": str(row["created_at"] or ""),
@@ -1004,77 +1600,50 @@ def recharge_request_row_to_dict(row: sqlite3.Row) -> dict[str, Any]:
     }
 
 
-def socket_state_snapshot() -> list[dict[str, Any]]:
-    stations = load_stations()
-    status_by_key: dict[tuple[str, int], dict[str, Any]] = {}
-    with db_connect() as conn:
-        rows = conn.execute(
-            """
-            SELECT *
-            FROM orders
-            ORDER BY id DESC
-            """
-        ).fetchall()
-
-    for row in rows:
-        device_code = str(row["device_code"] or "").strip()
-        socket_no = int(row["socket_no"] or 0)
-        if not device_code or socket_no <= 0:
-            continue
-        key = (device_code, socket_no)
-        if key in status_by_key:
-            continue
-        order = row_to_dict(row)
-        normalized = str(order["status"] or "").upper()
-        if normalized in {"PENDING", "PROCESSING"}:
-            status_by_key[key] = {"status": "处理中", "order": order}
-            continue
-        if normalized == "SUCCESS" and order["charge_state"] == "CHARGING_ESTIMATED":
-            status_by_key[key] = {"status": "充电中", "order": order}
-            continue
-        status_by_key[key] = {"status": "空闲", "order": order}
-
-    regions: dict[str, dict[str, Any]] = {}
-    for station in stations:
-        region_name = str(station["region"])
-        region = regions.setdefault(region_name, {"region": region_name, "stations": []})
-        sockets: list[dict[str, Any]] = []
-        disabled = {int(item) for item in station.get("disabled_sockets", [])}
-        for socket_no in range(1, int(station["socket_count"]) + 1):
-            if socket_no in disabled:
-                sockets.append({"socket_no": socket_no, "status": "故障", "detail": "已标记故障"})
-                continue
-            snapshot = status_by_key.get((station["device_code"], socket_no))
-            if snapshot and snapshot["status"] != "空闲":
-                detail = ""
-                order = snapshot["order"]
-                if snapshot["status"] == "充电中":
-                    detail = f"预计结束：{order['estimated_finish_at']}"
-                elif snapshot["status"] == "处理中":
-                    detail = order["result_message"] or "订单正在处理"
-                sockets.append({"socket_no": socket_no, "status": snapshot["status"], "detail": detail})
-            else:
-                sockets.append({"socket_no": socket_no, "status": "空闲", "detail": ""})
-        region["stations"].append(
-            {
-                "id": station["id"],
-                "name": station["name"],
-                "device_code": station["device_code"],
-                "region": region_name,
-                "sockets": sockets,
-            }
-        )
-    return list(regions.values())
+def filter_socket_overview_by_region(
+    snapshot: list[dict[str, Any]],
+    region_key: str | None = None,
+) -> list[dict[str, Any]]:
+    selected_region_key = overview_region_key(region_key) if region_key else ""
+    if not selected_region_key:
+        return snapshot
+    return [
+        region
+        for region in snapshot
+        if overview_region_key(region.get("region", "")) == selected_region_key
+    ]
 
 
-def create_recharge_request(conn: sqlite3.Connection, *, user: sqlite3.Row, amount_yuan: float, note: str) -> sqlite3.Row:
+def socket_state_snapshot(region_key: str | None = None) -> list[dict[str, Any]]:
+    pushed_snapshot = latest_agent_socket_overview()
+    if pushed_snapshot is not None:
+        return filter_socket_overview_by_region(pushed_snapshot, region_key)
+    return compute_live_socket_state_snapshot(region_key=region_key)
+
+
+def create_recharge_request(
+    conn: sqlite3.Connection,
+    *,
+    user: sqlite3.Row,
+    amount_yuan: float,
+    payment_method: str,
+    note: str,
+) -> sqlite3.Row:
     ts = now_iso()
     cursor = conn.execute(
         """
-        INSERT INTO recharge_requests (user_id, phone, amount_yuan, status, note, created_at, updated_at)
-        VALUES (?, ?, ?, 'PENDING', ?, ?, ?)
+        INSERT INTO recharge_requests (user_id, phone, amount_yuan, payment_method, status, note, created_at, updated_at)
+        VALUES (?, ?, ?, ?, 'PENDING', ?, ?, ?)
         """,
-        (int(user["id"]), str(user["phone"] or ""), float(amount_yuan), note.strip(), ts, ts),
+        (
+            int(user["id"]),
+            str(user["phone"] or ""),
+            float(amount_yuan),
+            payment_method.strip(),
+            note.strip(),
+            ts,
+            ts,
+        ),
     )
     row = conn.execute("SELECT * FROM recharge_requests WHERE id = ?", (cursor.lastrowid,)).fetchone()
     if row is None:
@@ -1109,12 +1678,21 @@ def review_recharge_request(
         (next_status, ts, ts, review_note.strip(), request_id),
     )
     if approve:
+        amount_yuan = float(row["amount_yuan"] or 0)
+        bonus_yuan = recharge_bonus_yuan(amount_yuan)
         apply_balance_delta(
             conn,
             user_id=int(row["user_id"]),
-            delta_yuan=float(row["amount_yuan"]),
+            delta_yuan=round(amount_yuan + bonus_yuan, 2),
             reason=f"recharge_request:{request_id}",
         )
+        if bonus_yuan > 0:
+            merged_note = review_note.strip()
+            bonus_note = f"充值赠送 ¥{bonus_yuan:.2f}"
+            conn.execute(
+                "UPDATE recharge_requests SET review_note = ? WHERE id = ?",
+                ((f"{merged_note}；{bonus_note}" if merged_note else bonus_note), request_id),
+            )
     updated = conn.execute("SELECT * FROM recharge_requests WHERE id = ?", (request_id,)).fetchone()
     if updated is None:
         raise HTTPException(status_code=500, detail="failed to update recharge request")
@@ -1147,16 +1725,48 @@ def update_order_result(order_id: int, status: str, message: str, vendor_order_i
         )
 
         if (
+            status == "SUCCESS"
+            and row["payment_mode"] == "balance"
+            and int(row["balance_deducted"] or 0) == 0
+        ):
+            charge_amount = total_cost_yuan(float(row["amount_yuan"] or 0))
+            try:
+                apply_balance_delta(
+                    conn,
+                    user_id=int(row["user_id"]),
+                    delta_yuan=-charge_amount,
+                    reason=f"order_success_charge:{order_id}",
+                )
+                conn.execute(
+                    "UPDATE orders SET balance_deducted = 1 WHERE id = ?",
+                    (order_id,),
+                )
+            except HTTPException as err:
+                if getattr(err, "status_code", 0) == 400:
+                    message = f"{message}；充电成功，但余额扣款失败，请联系管理员处理".strip("；")
+                    conn.execute(
+                        """
+                        UPDATE orders
+                        SET result_message = ?, updated_at = ?
+                        WHERE id = ?
+                        """,
+                        (message, now_iso(), order_id),
+                    )
+                else:
+                    raise
+
+        if (
             status == "FAILED"
             and BALANCE_REFUND_ON_FAIL
             and row["payment_mode"] == "balance"
             and int(row["balance_deducted"] or 0) == 1
             and int(row["balance_refunded"] or 0) == 0
         ):
+            refund_amount = total_cost_yuan(float(row["amount_yuan"] or 0))
             apply_balance_delta(
                 conn,
                 user_id=int(row["user_id"]),
-                delta_yuan=float(row["amount_yuan"]),
+                delta_yuan=refund_amount,
                 reason=f"order_failed_refund:{order_id}",
             )
             conn.execute(
@@ -1195,6 +1805,54 @@ def upsert_agent_runtime(payload: AgentHeartbeatPayload) -> None:
             ),
         )
         conn.commit()
+
+
+def upsert_agent_socket_overview(payload: AgentSocketOverviewPayload) -> None:
+    ts = now_iso()
+    captured_at = payload.captured_at.strip() or ts
+    snapshot_json = json.dumps(payload.snapshot, ensure_ascii=False)
+    with db_connect() as conn:
+        conn.execute(
+            """
+            INSERT INTO agent_socket_overview (agent_name, snapshot_json, captured_at, updated_at)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(agent_name) DO UPDATE SET
+                snapshot_json = excluded.snapshot_json,
+                captured_at = excluded.captured_at,
+                updated_at = excluded.updated_at
+            """,
+            (
+                payload.agent_name.strip(),
+                snapshot_json,
+                captured_at,
+                ts,
+            ),
+        )
+        conn.commit()
+
+
+def latest_agent_socket_overview() -> list[dict[str, Any]] | None:
+    with db_connect() as conn:
+        row = conn.execute(
+            """
+            SELECT agent_name, snapshot_json, captured_at, updated_at
+            FROM agent_socket_overview
+            ORDER BY captured_at DESC, updated_at DESC
+            LIMIT 1
+            """
+        ).fetchone()
+    if row is None:
+        return None
+    captured_at = parse_iso(str(row["captured_at"] or ""))
+    if captured_at is None:
+        return None
+    if (datetime.now(UTC) - captured_at).total_seconds() > AGENT_SOCKET_OVERVIEW_EXPIRE_SECONDS:
+        return None
+    try:
+        snapshot = json.loads(str(row["snapshot_json"] or "[]"))
+    except Exception:
+        return None
+    return snapshot if isinstance(snapshot, list) else None
 
 
 def get_agent_runtime_status() -> dict[str, Any]:
@@ -1236,6 +1894,7 @@ def get_service_status() -> dict[str, Any]:
     qr_name = "wechat_qr.png"
     qr_path = WEB_ASSETS_DIR / qr_name
     payment_qr_url = f"/assets/{qr_name}" if qr_path.exists() else ""
+    manual_recharge_enabled = bool(payment_qr_url)
     return {
         "service_mode": service_mode,
         "worker_enabled": WORKER_ENABLED,
@@ -1245,12 +1904,15 @@ def get_service_status() -> dict[str, Any]:
         "allow_order_submission": allow_order_submission,
         "payment_mode": PAYMENT_MODE,
         "payment_bridge_url": PAYMENT_BRIDGE_URL,
+        "socket_overview_bridge_url": SOCKET_OVERVIEW_BRIDGE_URL,
         "payment_token_required": PAYMENT_MODE == "token",
         "balance_enabled": PAYMENT_MODE == "balance",
         "balance_refund_on_fail": BALANCE_REFUND_ON_FAIL,
         "payment_qr_url": payment_qr_url,
-        "manual_recharge_enabled": bool(payment_qr_url),
-        "recharge_qr_note": DEFAULT_RECHARGE_QR_NOTE,
+        "manual_recharge_enabled": manual_recharge_enabled,
+        "manual_payment_contact": MANUAL_PAYMENT_CONTACT,
+        "manual_payment_instructions": MANUAL_PAYMENT_INSTRUCTIONS or DEFAULT_RECHARGE_QR_NOTE,
+        "recharge_qr_note": MANUAL_PAYMENT_INSTRUCTIONS or DEFAULT_RECHARGE_QR_NOTE,
         **agent_status,
     }
 
@@ -1310,11 +1972,11 @@ def health() -> dict[str, Any]:
     }
 
 
-@app.get("/api/stations", response_model=list[StationView])
+@app.get("/api/stations", response_model=list[StationPublicView])
 def list_stations(
     q: str | None = Query(default=None, max_length=100),
     region: str | None = Query(default=None, max_length=100),
-) -> list[StationView]:
+) -> list[StationPublicView]:
     stations = load_stations()
     if region:
         region_name = region.strip().lower()
@@ -1326,12 +1988,12 @@ def list_stations(
             for station in stations
             if query in station["name"].lower() or query in station["device_code"].lower()
         ]
-    return [StationView(**station) for station in stations[:200]]
+    return [StationPublicView(**station) for station in stations[:200]]
 
 
 @app.get("/api/socket-overview")
-def get_socket_overview() -> list[dict[str, Any]]:
-    return socket_state_snapshot()
+def get_socket_overview(region: str | None = Query(default=None, max_length=50)) -> list[dict[str, Any]]:
+    return socket_state_snapshot(region_key=region)
 
 
 @app.post("/api/auth/register", response_model=AuthResponse)
@@ -1427,7 +2089,19 @@ def my_orders(
             "SELECT * FROM orders WHERE user_id = ? ORDER BY id DESC LIMIT ?",
             (user["id"], limit),
         ).fetchall()
-    return [OrderView(**row_to_dict(row)) for row in rows]
+    items = [row_to_dict(row) for row in rows]
+    member_id = configured_member_id()
+    if member_id:
+        try:
+            using_orders, _ = fetch_using_orders(member_id)
+        except Exception:
+            using_orders = {}
+        for item in items:
+            key = (str(item.get("device_code", "")), int(item.get("socket_no", 0) or 0))
+            if key in using_orders and str(item.get("status", "")).upper() == "SUCCESS":
+                item["charge_state"] = "CHARGING_LIVE"
+                item["charge_finished_at"] = ""
+    return [OrderView(**item) for item in items]
 
 
 @app.get("/api/me/recharge-requests", response_model=list[RechargeRequestView])
@@ -1461,6 +2135,7 @@ def create_my_recharge_request(
                 conn,
                 user=user,
                 amount_yuan=float(payload.amount_yuan),
+                payment_method=payload.payment_method,
                 note=payload.note,
             )
             conn.commit()
@@ -1487,6 +2162,8 @@ def create_order(payload: OrderCreate, user: sqlite3.Row = Depends(require_user)
         validate_station_socket(station, int(payload.socket_no))
         station_name = station["name"]
         device_code = station["device_code"]
+        if not device_code:
+            raise HTTPException(status_code=422, detail="该站点尚未录入设备编码，暂不可下单")
     else:
         station_name = payload.station_name.strip()
         device_code = payload.device_code.strip()
@@ -1507,13 +2184,6 @@ def create_order(payload: OrderCreate, user: sqlite3.Row = Depends(require_user)
                 current_balance = float(balance_row["balance_yuan"] or 0)
                 if current_balance + 1e-9 < total_cost:
                     raise HTTPException(status_code=402, detail="余额不足，请先充值")
-                apply_balance_delta(
-                    conn,
-                    user_id=int(user["id"]),
-                    delta_yuan=-total_cost,
-                    reason=f"order_payment:{user['id']}",
-                )
-                balance_deducted = 1
             elif payment_mode == "token":
                 if not payment_token:
                     raise HTTPException(status_code=400, detail="支付码不能为空")
@@ -1672,6 +2342,28 @@ def adjust_user_balance(user_id: int, payload: BalanceAdjustPayload) -> dict[str
     return {"ok": True, "user_id": user_id, "balance_yuan": new_balance}
 
 
+@app.post("/api/admin/users/{user_id}/password", dependencies=[Depends(require_admin)])
+def reset_user_password(user_id: int, payload: PasswordResetPayload) -> dict[str, Any]:
+    with db_connect() as conn:
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            user = conn.execute(
+                "SELECT id, phone FROM users WHERE id = ?",
+                (user_id,),
+            ).fetchone()
+            if user is None:
+                raise HTTPException(status_code=404, detail="user not found")
+            conn.execute(
+                "UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?",
+                (hash_password(payload.new_password), now_iso(), user_id),
+            )
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+    return {"ok": True, "user_id": user_id, "phone": str(user["phone"] or "")}
+
+
 @app.get("/api/admin/recharge-requests", dependencies=[Depends(require_admin)])
 def admin_list_recharge_requests(
     limit: int = Query(default=100, ge=1, le=500),
@@ -1777,6 +2469,28 @@ def admin_stats() -> dict[str, Any]:
     }
 
 
+@app.get("/api/admin/realtime-snapshot-config", dependencies=[Depends(require_admin)])
+def admin_realtime_snapshot_config() -> dict[str, Any]:
+    stations = load_stations()
+    return {
+        "ok": True,
+        "time": now_iso(),
+        "member_id": configured_member_id(),
+        "stations": [
+            {
+                "id": station.get("id", ""),
+                "name": station.get("name", ""),
+                "region": station.get("region", ""),
+                "device_code": station.get("device_code", ""),
+                "socket_count": int(station.get("socket_count", 10) or 10),
+                "disabled_sockets": list(station.get("disabled_sockets", []) or []),
+                "device_ck": station.get("device_ck", ""),
+            }
+            for station in stations
+        ],
+    }
+
+
 @app.post("/api/admin/orders/{order_id}/retry", dependencies=[Depends(require_admin)])
 def retry_order(order_id: int) -> dict[str, Any]:
     with db_connect() as conn:
@@ -1812,6 +2526,17 @@ def agent_heartbeat(payload: AgentHeartbeatPayload) -> dict[str, Any]:
         "agent_name": payload.agent_name,
         "agent_online": True,
         "heartbeat_at": now_iso(),
+    }
+
+
+@app.post("/api/agent/socket-overview", dependencies=[Depends(require_agent)])
+def agent_socket_overview(payload: AgentSocketOverviewPayload) -> dict[str, Any]:
+    upsert_agent_socket_overview(payload)
+    return {
+        "ok": True,
+        "agent_name": payload.agent_name,
+        "captured_at": payload.captured_at or now_iso(),
+        "regions": len(payload.snapshot),
     }
 
 

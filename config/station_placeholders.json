@@ -1,0 +1,34 @@
+[
+  {
+    "region": "19栋",
+    "station_numbers": "40-73",
+    "name_template": "{n}号站成都大学19栋女生宿舍",
+    "socket_count": 10,
+    "address": "四川省成都市龙泉驿区十陵街道成都大学",
+    "source": "user-provided-list"
+  },
+  {
+    "region": "学术交流中心",
+    "station_numbers": "36,37,38,39,74-79",
+    "name_template": "{n}号站成都大学学术交流中心三号充电区V3.0",
+    "socket_count": 10,
+    "address": "四川省成都市龙泉驿区十陵街道成都大学",
+    "source": "user-provided-list"
+  },
+  {
+    "region": "东盟一号",
+    "station_numbers": "1,2,4-8,12,13,15,20-22,27,28,31,33",
+    "name_template": "{n}号站成都大学东盟一号充电区V3.0",
+    "socket_count": 10,
+    "address": "四川省成都市龙泉驿区十陵街道成都大学",
+    "source": "user-provided-list"
+  },
+  {
+    "region": "综合楼",
+    "station_numbers": "3,9,10,11,14,16-19,23-26,29,30,32,34,35",
+    "name_template": "{n}号站成都大学图书馆",
+    "socket_count": 10,
+    "address": "四川省成都市龙泉驿区十陵街道成都大学",
+    "source": "user-provided-list"
+  }
+]

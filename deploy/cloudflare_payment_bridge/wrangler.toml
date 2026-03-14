@@ -4,6 +4,7 @@ compatibility_date = "2025-01-15"
 compatibility_flags = ["nodejs_compat"]
 
 [vars]
-PAYMENT_PROVIDER = "codepay_legacy"
+PAYMENT_PROVIDER = "xpay_epay"
+PAYMENT_PAY_TYPES = "wxpay"
 RETURN_URL = "https://icenorth.pythonanywhere.com/"
-
+CODEPAY_CHANNEL_ID = "829"

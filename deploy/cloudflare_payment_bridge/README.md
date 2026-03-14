@@ -1,50 +1,66 @@
-# Cloudflare Workers 支付中转原型
+# Cloudflare Workers XPay 中转
 
-这个原型的目标不是替代整个网站，而是把“第三方支付下单 / 签名 / 回调验签”这部分从 PythonAnywhere 免费版剥离出去。
+这个 Worker 用来把 `XPay/EPay` 风格的支付下单、签名、回调验签放到 Cloudflare 上执行，避免 PythonAnywhere 免费版因为外部请求限制而卡在“创建支付订单”这一步。
 
-## 解决什么问题
+## 它负责什么
 
-PythonAnywhere 免费账户对服务器端主动访问外部网站/API 有 allowlist 限制。  
-如果第三方支付要求你在服务端先创建支付订单，再返回二维码或支付链接，就很容易卡住。
-
-这个 Worker 原型负责：
-
-1. 接收前端发来的充值金额
+1. 接收前端发来的充值金额与支付方式
 2. 先在 PythonAnywhere 创建一条 `recharge_request`
-3. 再代表你去调用第三方支付接口
-4. 收到支付回调后，自动调用 PythonAnywhere 后台接口审核通过该充值申请
-5. 用户余额自动增加
+3. 调用 XPay/EPay 下单接口拿到支付链接或二维码
+4. 收到异步回调后，自动调用 PythonAnywhere 后台接口审核通过充值申请
+5. 前端轮询 `GET /api/recharge/status` 时，也会补一次“主动查单自动入账”
 
-## 当前实现
-
-- 运行时：Cloudflare Workers
-- 文件入口：`src/index.mjs`
-- 配置：`wrangler.toml`
-- 本地开发变量示例：`.dev.vars.example`
-
-当前原型实现了 3 个接口：
+## 当前接口
 
 - `GET /api/health`
+- `GET /api/socket-overview`
 - `POST /api/recharge/create`
+- `GET /api/recharge/status`
 - `POST /api/payment/notify`
+
+`GET /api/health` 会返回当前 Worker 的 `provider`、`pay_types`，以及 `payment_configured` / `realtime_configured`（是否已完成支付桥 / 实时站点代理配置）。
 
 ## 环境变量
 
-需要在 Cloudflare 中配置：
+必填（支付桥）：
 
-- `CODEPAY_ID`
-- `CODEPAY_KEY`
-- `CODEPAY_API_BASE`
+- `CODEPAY_ID` 或 `XPAY_PID`
+- `CODEPAY_KEY` 或 `XPAY_KEY`
+- `CODEPAY_API_BASE` 或 `XPAY_API_BASE`
 - `PYTHONANYWHERE_BASE_URL`
 - `PYTHONANYWHERE_ADMIN_TOKEN`
 - `RETURN_URL`
 
+必填（站点状态实时代理）：
+
+- `PYTHONANYWHERE_BASE_URL`
+- `PYTHONANYWHERE_ADMIN_TOKEN`
+
+推荐：
+
+- `PAYMENT_PAY_TYPES`
+  逗号分隔，例如 `wxpay` 或 `wxpay,alipay`
+- `CODEPAY_CHANNEL_ID`
+  默认通道号
+- `CODEPAY_CHANNEL_ID_WXPAY`
+  微信专用通道号
+- `CODEPAY_CHANNEL_ID_ALIPAY`
+  支付宝专用通道号
+
+可选兼容项：
+
+- `PROVIDER_CREATE_PATH`
+  默认 `/xpay/epay/mapi.php`
+- `PROVIDER_QUERY_PATH`
+  默认 `/xpay/epay/api.php`
+- `PROVIDER_SIGN_MODE`
+  `concat` 或 `amp_key`，默认 `concat`
+
 ## 本地开发
 
-1. 安装 Wrangler
-2. 复制 `.dev.vars.example` 为 `.dev.vars`
-3. 填入真实参数
-4. 启动：
+1. 复制 `.dev.vars.example` 为 `.dev.vars`
+2. 填入真实参数
+3. 运行：
 
 ```bash
 npx wrangler dev
@@ -56,51 +72,49 @@ npx wrangler dev
 npx wrangler deploy
 ```
 
-部署后你会得到一个 Worker URL，例如：
-
-```text
-https://zhongwang-payment-bridge.<your-subdomain>.workers.dev
-```
-
-然后把这个 URL 写入 PythonAnywhere 的：
+部署完成后，把 Worker URL 写入：
 
 ```json
 {
+  "payment_mode": "balance",
   "payment_bridge_url": "https://zhongwang-payment-bridge.<your-subdomain>.workers.dev"
 }
 ```
 
-文件位置是：
+文件位置：
 
 ```text
 config/pythonanywhere_secrets.json
 ```
 
-## 前端如何接
+如果要启用【站点状态】实时代理，请同时配置：
 
-用户登录你的网站后：
+```json
+{
+  "socket_overview_bridge_url": "https://zhongwang-payment-bridge.<your-subdomain>.workers.dev"
+}
+```
 
-1. 前端向 Worker 的 `POST /api/recharge/create` 发请求
-2. 请求头带上 PythonAnywhere 用户登录后的 `Authorization: Bearer <session_token>`
-3. Worker 会先到 PythonAnywhere 创建充值申请
-4. 再去调第三方支付接口
-5. 把支付二维码或支付链接返回前端
+## 前端接入方式
 
-支付成功后：
-
-1. 第三方支付平台回调 Worker `POST /api/payment/notify`
-2. Worker 校验签名
-3. Worker 调用 PythonAnywhere：
+1. 网站前端调用 Worker 的 `POST /api/recharge/create`
+2. 请求头带上 PythonAnywhere 登录态：`Authorization: Bearer <session_token>`
+3. Worker 先在 PythonAnywhere 创建充值申请
+4. 再向 XPay 下单，返回支付链接或二维码
+5. 用户支付后，XPay 回调 Worker 的 `POST /api/payment/notify`
+6. Worker 自动调用：
    `POST /api/admin/recharge-requests/{id}/approve`
-4. 用户余额自动到账
+7. 用户余额自动到账
 
-## 当前限制
+站点状态：
 
-- 这是“充值自动入账”原型，不是“付款后直接创建充电订单”的完整闭环
-- 默认按当前仓库里的旧版 `codepay/upaypro` 请求格式做桥接
-- 如果支付平台字段或签名规则与你实际账号不一致，需要按官方文档再调整
-- 真实生产还建议增加：
-  - 回调幂等日志
-  - 更严格的请求来源校验
-  - 金额白名单
-  - 用户限流
+1. 网站前端调用 Worker 的 `GET /api/socket-overview`
+2. 请求头带上 PythonAnywhere 登录态：`Authorization: Bearer <session_token>`
+3. Worker 会先去 PythonAnywhere 拉取站点配置，再访问官方实时接口，最后返回精简后的站点状态
+
+## 现网建议
+
+- 如果商户当前只开通了微信，请把 `PAYMENT_PAY_TYPES=wxpay`
+- 如果支付宝未开通，不要在前端显示支付宝入口
+- 回调地址要填 Worker 的 `/api/payment/notify`，不要直接填 PythonAnywhere
+- 正式环境建议再补一层回调幂等日志和来源校验

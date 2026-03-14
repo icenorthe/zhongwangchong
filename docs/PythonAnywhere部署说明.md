@@ -77,18 +77,26 @@ from services.pythonanywhere_app import app
 ```json
 {
   "admin_token": "your-admin-token",
+  "admin_password": "your-admin-password",
   "agent_token": "your-agent-token",
   "worker_enabled": "0",
   "require_agent_online_for_orders": "1",
   "agent_heartbeat_expire_seconds": "45",
-  "payment_mode": "token",
-  "payment_token_secret": "your-secret",
-  "payment_token_ttl_seconds": "900",
+  "socket_overview_bridge_url": "",
+  "payment_mode": "balance",
+  "payment_bridge_url": "https://zhongwang-payment-bridge.<your-subdomain>.workers.dev",
+  "manual_payment_contact": "微信：your-wechat / 手机：13800000000",
+  "manual_payment_instructions": "扫码付款后点击“我已付款”，备注尾号或转账说明，我确认到账后会补余额。",
   "balance_refund_on_fail": "1"
 }
 ```
 
 `services/pythonanywhere_app.py` 会自动读取它。
+
+说明：
+
+- `admin_token` 用于后台接口鉴权
+- `admin_password` 是后台页面的第二道密码，不填则不启用
 
 ## 8）验证部署结果
 
@@ -101,17 +109,34 @@ from services.pythonanywhere_app import app
 
 - `worker_enabled` 为 `false`
 - `service_mode` 为 `cloud_agent`
+- `payment_mode` 为 `balance`
+- `payment_bridge_url` 指向你的 Cloudflare Worker
 - 如果本地 Agent 尚未启动，`agent_online` 会是 `false`
 
-## 8.1）个人收款的支付校验（支付码模式）
+## 8.1）XPay 在线收款与回调
 
-个人微信收款没有官方的支付回调接口可用，因此本项目采用“支付码”方案：
+推荐结构：
 
-1. 用户在手机上扫你的微信收款码完成转账。
-2. 你在后台确认收到款后，通过后台页面或接口发放一次性 `payment token`。
-3. 用户把 token 粘贴到下单页，再提交订单。
+1. 网站前端调用 Cloudflare Worker 创建充值支付单。
+2. Worker 再去请求 XPay/EPay 接口，返回微信或支付宝支付链接。
+3. XPay 支付成功后回调 Worker 的 `/api/payment/notify`。
+4. Worker 自动调用 PythonAnywhere 后台接口审核通过充值申请。
+5. 用户余额自动到账，页面也会轮询查单兜底。
 
-可选：把你的收款码图片放到 `assets/web/wechat_qr.png`，同步到 PythonAnywhere 后，下单页会自动显示二维码（`/assets/wechat_qr.png`）。
+当前项目更适合这样配：
+
+1. PythonAnywhere 只负责网站、登录、订单和余额。
+2. Cloudflare Worker 负责 XPay 下单、签名、回调。
+3. `payment_mode` 使用 `balance`，不要再用旧的 `token` 模式做在线收款。
+
+如果你暂时没有 XPay 商户，也可以把微信收款码放到 `assets/web/wechat_qr.png`，同步到 PythonAnywhere 后先用线下确认到账的方式过渡。
+
+现在页面已经支持轻量 MVP：
+
+1. 首页保留“立即购买”按钮。
+2. 点击后弹出收款二维码、付款说明和联系方式。
+3. 用户付款后提交“我已付款”申请。
+4. 你在后台审核通过后，余额会补到用户账户里。
 
 ## 9）为本地执行做准备
 
@@ -136,12 +161,15 @@ from services.pythonanywhere_app import app
 同步脚本会上传这些本地文件：
 
 - `services/mobile_charge_server.py`
+- `services/socket_snapshot.py`
 - `services/pythonanywhere_app.py`
 - `services/project_paths.py`
 - `services/__init__.py`
 - `assets/web/mobile_order.html`
 - `assets/web/admin_orders.html`
 - `config/stations.json`
+- `config/station_placeholders.json`
+- `config/charge_api_config.json`
 - `config/pythonanywhere_secrets.json`
 - `config/gateway_config.json`
 - `requirements_mobile.txt`

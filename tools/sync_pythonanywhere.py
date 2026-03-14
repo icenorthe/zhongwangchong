@@ -13,6 +13,8 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 CONFIG_PATH = PROJECT_ROOT / "config" / "pythonanywhere_sync_config.json"
+STATIONS_PATH = PROJECT_ROOT / "config" / "stations.json"
+STATION_PLACEHOLDERS_PATH = PROJECT_ROOT / "config" / "station_placeholders.json"
 
 
 def load_config() -> dict:
@@ -31,7 +33,107 @@ def build_headers(api_token: str, content_type: str | None = None) -> dict[str, 
     return headers
 
 
-def upload_file(api_host: str, username: str, api_token: str, local_file: Path, remote_file: str) -> None:
+def expand_number_spec(spec: str) -> list[int]:
+    values: set[int] = set()
+    for chunk in str(spec or "").split(","):
+        part = chunk.strip()
+        if not part:
+            continue
+        if "-" in part:
+            left, right = part.split("-", 1)
+            try:
+                start = int(left.strip())
+                end = int(right.strip())
+            except ValueError:
+                continue
+            if start > end:
+                start, end = end, start
+            for number in range(start, end + 1):
+                values.add(number)
+            continue
+        try:
+            values.add(int(part))
+        except ValueError:
+            continue
+    return sorted(values)
+
+
+def build_generated_uploads() -> dict[str, bytes]:
+    if not STATIONS_PATH.exists() or not STATION_PLACEHOLDERS_PATH.exists():
+        return {}
+    try:
+        stations = json.loads(STATIONS_PATH.read_text(encoding="utf-8-sig"))
+        placeholders = json.loads(STATION_PLACEHOLDERS_PATH.read_text(encoding="utf-8-sig"))
+    except Exception:
+        return {}
+    if not isinstance(stations, list) or not isinstance(placeholders, list):
+        return {}
+
+    merged = [dict(item) for item in stations if isinstance(item, dict)]
+    seen_numbers = {
+        int(item.get("sort_order"))
+        for item in merged
+        if isinstance(item, dict) and str(item.get("sort_order", "")).isdigit()
+    }
+    seen_ids = {
+        str(item.get("id")).strip()
+        for item in merged
+        if isinstance(item, dict) and str(item.get("id", "")).strip()
+    }
+
+    default_address = "四川省成都市龙泉驿区十陵街道成都大学"
+    for item in placeholders:
+        if not isinstance(item, dict):
+            continue
+        region = str(item.get("region", "")).strip()
+        name_template = str(item.get("name_template", "")).strip()
+        station_numbers = str(item.get("station_numbers", "")).strip()
+        if not region or not name_template or not station_numbers:
+            continue
+        address = str(item.get("address", "")).strip() or default_address
+        socket_count = int(item.get("socket_count", 10) or 10)
+        socket_count = max(1, min(socket_count, 20))
+        source = str(item.get("source", "user-provided-list")).strip() or "user-provided-list"
+        for number in expand_number_spec(station_numbers):
+            station_id = f"cd-{number}"
+            if number in seen_numbers or station_id in seen_ids:
+                continue
+            merged.append(
+                {
+                    "id": station_id,
+                    "region": region,
+                    "sort_order": number,
+                    "name": name_template.replace("{n}", str(number)),
+                    "device_code": "",
+                    "socket_count": socket_count,
+                    "disabled_sockets": [],
+                    "address": address,
+                    "source": source,
+                }
+            )
+            seen_numbers.add(number)
+            seen_ids.add(station_id)
+
+    region_sort = {"综合楼": 1, "学术交流中心": 2, "东盟一号": 3, "19栋": 4, "19栋女生宿舍": 4}
+    merged.sort(
+        key=lambda item: (
+            region_sort.get(str(item.get("region", "")).strip(), 99),
+            int(item.get("sort_order", 9999) or 9999),
+            str(item.get("name", "")),
+        )
+    )
+    content = (json.dumps(merged, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+    return {"config/stations.json": content}
+
+
+def upload_file(
+    api_host: str,
+    username: str,
+    api_token: str,
+    local_file: Path,
+    remote_file: str,
+    content_override: bytes | None = None,
+) -> None:
     boundary = f"----CodexBoundary{uuid.uuid4().hex}"
     content_type = mimetypes.guess_type(local_file.name)[0] or "application/octet-stream"
     payload = io.BytesIO()
@@ -43,7 +145,7 @@ def upload_file(api_host: str, username: str, api_token: str, local_file: Path, 
             f"Content-Type: {content_type}\r\n\r\n"
         ).encode("utf-8")
     )
-    payload.write(local_file.read_bytes())
+    payload.write(content_override if content_override is not None else local_file.read_bytes())
     payload.write(f"\r\n--{boundary}--\r\n".encode("utf-8"))
 
     url = (
@@ -84,6 +186,7 @@ def main() -> int:
     if not username or not api_token or not domain or not remote_project_path:
         raise SystemExit("Config contains empty required fields.")
 
+    generated_uploads = build_generated_uploads()
     print(f"Syncing to PythonAnywhere project: {remote_project_path}")
     for relative_path in files:
         local_file = PROJECT_ROOT / relative_path
@@ -91,7 +194,14 @@ def main() -> int:
             raise SystemExit(f"Missing local file: {local_file}")
         remote_file = f"{remote_project_path}/{relative_path}"
         print(f"Uploading {relative_path} -> {remote_file}")
-        upload_file(api_host, username, api_token, local_file, remote_file)
+        upload_file(
+            api_host,
+            username,
+            api_token,
+            local_file,
+            remote_file,
+            content_override=generated_uploads.get(relative_path),
+        )
 
     print(f"Reloading webapp: {domain}")
     try:
