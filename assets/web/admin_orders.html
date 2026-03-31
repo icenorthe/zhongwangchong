@@ -6,20 +6,358 @@
   <title>订单后台</title>
   <style>
     :root{--bg:#f3f4f6;--card:#fff;--text:#111827;--muted:#6b7280;--border:#e5e7eb;--ok:#166534;--fail:#b91c1c;--pending:#92400e;--processing:#1d4ed8}
-    *{box-sizing:border-box} body{margin:0;font-family:"Microsoft YaHei","PingFang SC","Noto Sans SC",sans-serif;background:linear-gradient(180deg,#eef2f7 0%,#f3f4f6 50%,#f9fafb 100%);color:var(--text);padding:16px}
-    .wrap{max-width:1260px;margin:0 auto;display:grid;gap:12px}.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px}
-    .top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap} h1{margin:0;font-size:24px}.muted{color:var(--muted);font-size:13px;line-height:1.6}
-    .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center} input,select,button{border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:14px;background:#fff}
+    *{box-sizing:border-box} body{margin:0;font-family:"Microsoft YaHei","PingFang SC","Noto Sans SC",sans-serif;background:
+      radial-gradient(120% 120% at 0% 0%,rgba(255,244,214,.7) 0%,rgba(255,244,214,0) 55%),
+      radial-gradient(120% 120% at 100% 10%,rgba(186,230,253,.65) 0%,rgba(186,230,253,0) 60%),
+      radial-gradient(120% 120% at 20% 100%,rgba(196,181,253,.5) 0%,rgba(196,181,253,0) 55%),
+      linear-gradient(180deg,#eef2f7 0%,#f3f4f6 50%,#f9fafb 100%);
+      color:var(--text);padding:16px}
+    .wrap{position:relative}
+    .wrap::before{content:"";position:fixed;right:-160px;top:-160px;width:380px;height:380px;border-radius:50%;background:radial-gradient(circle,rgba(59,130,246,.12) 0%,rgba(59,130,246,0) 70%);z-index:0;pointer-events:none}
+    .wrap::after{content:"";position:fixed;left:-180px;bottom:-200px;width:420px;height:420px;border-radius:50%;background:radial-gradient(circle,rgba(34,197,94,.12) 0%,rgba(34,197,94,0) 72%);z-index:0;pointer-events:none}
+    .card{position:relative;z-index:1;backdrop-filter:blur(6px)}
+    .wrap{max-width:1260px;margin:0 auto;display:grid;gap:12px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px}
+    .top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+    h1{margin:0;font-size:22px}.muted{color:var(--muted);font-size:13px;line-height:1.6}
+    .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    input,select,button{border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:14px;background:#fff}
     button{cursor:pointer;border-color:#111;background:#111;color:#fff;font-weight:600} button.secondary{background:#fff;color:#111}
-    .grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}.stat{border:1px solid var(--border);border-radius:10px;padding:10px;background:#fafafa}.stat b{display:block;font-size:24px;margin-top:4px}
-    .split{display:grid;grid-template-columns:1.2fr 1fr;gap:12px} .table-wrap{overflow-x:auto}
-    table{width:100%;border-collapse:collapse;min-width:1080px} th,td{border-bottom:1px solid var(--border);text-align:left;padding:10px 8px;font-size:14px;vertical-align:top} th{background:#f9fafb;font-size:13px;color:var(--muted);position:sticky;top:0}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
+    .stat{border:1px solid var(--border);border-radius:10px;padding:10px;background:#fafafa}.stat b{display:block;font-size:24px;margin-top:4px}
+    .hidden{display:none !important}
+    .tabs{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .tab-btn{cursor:pointer;border:1px solid var(--border);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:700;background:#fafafa;color:var(--muted)}
+    .tab-btn.active{border-color:#111;background:#fff;color:#111}
+    .status-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0 12px;align-items:stretch;width:100%}
+    .status-tab{cursor:pointer;border:1px solid var(--border);border-radius:12px;padding:12px 12px;background:#fff;color:var(--muted);font-weight:800;text-align:center;display:flex;align-items:center;justify-content:center;min-height:44px}
+    .status-tab.active{background:#111;color:#fff;border-color:#111}
+    .pane{display:grid;gap:10px}
+    .table-wrap{overflow:auto;max-height:70vh;border:1px solid var(--border);border-radius:10px;background:#fff}
+    table{width:100%;border-collapse:collapse;min-width:1080px}
+    th,td{border-bottom:1px solid var(--border);text-align:left;padding:10px 8px;font-size:14px;vertical-align:top}
+    th{background:#f9fafb;font-size:13px;color:var(--muted);position:sticky;top:0}
     .status{font-weight:700;padding:2px 8px;border-radius:999px;display:inline-block;font-size:12px;border:1px solid var(--border)}
-    .SUCCESS,.APPROVED{color:var(--ok);border-color:#86efac;background:#f0fdf4}.FAILED,.REJECTED{color:var(--fail);border-color:#fecaca;background:#fef2f2}.PENDING{color:var(--pending);border-color:#fde68a;background:#fffbeb}.PROCESSING{color:var(--processing);border-color:#bfdbfe;background:#eff6ff}
-    .pill{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--border);border-radius:999px;padding:6px 10px;font-size:13px;color:var(--muted);background:#fafafa}
-    .result{margin-top:10px;border:1px solid var(--border);border-radius:10px;padding:10px;background:#fafafa;font-size:13px;color:var(--muted);white-space:pre-wrap;word-break:break-all}
-    code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:#f3f4f6;padding:2px 6px;border-radius:6px;border:1px solid var(--border)}
-    @media (max-width:960px){.split,.grid{grid-template-columns:1fr}}
+    .SUCCESS,.APPROVED{color:var(--ok);border-color:#86efac;background:#f0fdf4}
+    .FAILED,.REJECTED{color:var(--fail);border-color:#fecaca;background:#fef2f2}
+    .PENDING{color:var(--pending);border-color:#fde68a;background:#fffbeb}
+    .PROCESSING{color:var(--processing);border-color:#bfdbfe;background:#eff6ff}
+    .nav{display:flex;gap:8px;align-items:center}
+    .nav a{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);border-radius:999px;padding:6px 10px;font-size:13px;color:var(--muted);text-decoration:none;background:#fafafa}
+    .nav a.active{border-color:#111;color:#111;background:#fff}
+    .order-groups{display:grid;gap:12px}
+    .order-group-title{font-weight:800}
+    .order-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px}
+    .order-split{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px}
+    .order-split h3{margin:0;font-size:14px}
+    .order-split-column{display:grid;gap:10px}
+    .order-split-header{display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .order-split-count{font-size:12px;color:var(--muted)}
+    .recharge-groups{display:grid;gap:10px}
+    .recharge-section{border:1px solid var(--border);border-radius:12px;padding:12px;background:#fff}
+    .recharge-section h3{margin:0 0 10px;font-size:15px}
+    .recharge-group{border:1px dashed var(--border);border-radius:10px;padding:10px;margin-bottom:8px}
+    .recharge-group:last-child{margin-bottom:0}
+    .recharge-group-title{font-weight:700;font-size:13px;margin-bottom:6px}
+    .recharge-group-table{width:100%;border-collapse:collapse;table-layout:fixed}
+    .recharge-group-table th,.recharge-group-table td{border-bottom:1px solid var(--border);padding:6px 4px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .recharge-group-table td.note{white-space:normal}
+    .recharge-group-table th{color:var(--muted);font-weight:600;background:#f9fafb}
+    .order-card{border:1px solid var(--border);border-radius:12px;padding:12px;background:#fff}
+    .order-card h3{margin:0 0 8px;font-size:15px}
+    .order-card p{margin:4px 0;color:var(--muted);font-size:13px;line-height:1.5}
+    .order-card .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    #pane-userView{position:relative;overflow:hidden;background:radial-gradient(120% 120% at 0% 0%,rgba(255,244,214,.9) 0%,rgba(255,244,214,0) 55%),radial-gradient(120% 120% at 100% 20%,rgba(186,230,253,.8) 0%,rgba(186,230,253,0) 60%),linear-gradient(180deg,#f8fafc 0%,#ffffff 45%,#f1f5f9 100%);border-color:#e2e8f0}
+    #pane-userView::before{content:"";position:absolute;right:-140px;top:-140px;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(59,130,246,.18) 0%,rgba(59,130,246,0) 70%)}
+    #pane-userView::after{content:"";position:absolute;left:-120px;bottom:-130px;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(34,197,94,.16) 0%,rgba(34,197,94,0) 72%)}
+    #pane-userView .order-groups{position:relative;z-index:1}
+    .user-view-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:4px 0 10px}
+    .view-tabs{display:flex;gap:8px;flex-wrap:wrap;padding:6px;border-radius:999px;border:1px solid #e2e8f0;background:rgba(255,255,255,.78);box-shadow:0 10px 24px rgba(15,23,42,.08)}
+    .view-tab{cursor:pointer;border:1px solid transparent;border-radius:999px;padding:6px 14px;font-size:13px;font-weight:700;background:transparent;color:#475569;transition:all .2s ease}
+    .view-tab:hover{color:#0f172a;border-color:#cbd5f5}
+    .view-tab.active{background:#111;color:#fff;border-color:#111;box-shadow:0 8px 22px rgba(17,17,17,.25)}
+    .view-meta{font-size:12px;color:#64748b}
+    .user-view-wrap{display:grid;gap:14px}
+    .user-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+    .summary-card{background:linear-gradient(135deg,rgba(255,255,255,.9),rgba(248,250,252,.92));border:1px solid #e2e8f0;border-radius:14px;padding:12px;box-shadow:0 10px 24px rgba(15,23,42,.08);position:relative;overflow:hidden}
+    .summary-card::after{content:"";position:absolute;right:-20px;top:-20px;width:80px;height:80px;border-radius:50%;background:rgba(148,163,184,.15)}
+    .summary-card.success::after{background:rgba(34,197,94,.18)}
+    .summary-card.fail::after{background:rgba(239,68,68,.18)}
+    .summary-card .label{font-size:12px;color:#64748b;letter-spacing:.2px}
+    .summary-card .value{font-size:22px;font-weight:800;margin-top:6px;color:#0f172a}
+    .summary-card.success .value{color:#16a34a}
+    .summary-card.fail .value{color:#dc2626}
+    .order-group-title{font-weight:800;font-size:16px;color:#0f172a;display:flex;align-items:center;gap:8px}
+    .order-group-title::before{content:"";width:16px;height:2px;border-radius:999px;background:#111}
+    .order-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+    .order-card{border:1px solid #e2e8f0;border-radius:16px;padding:14px 14px 12px;background:rgba(255,255,255,.96);box-shadow:0 12px 30px rgba(15,23,42,.08);position:relative;overflow:hidden;animation:cardIn .35s ease both;animation-delay:calc(var(--i,0) * 60ms);transition:transform .2s ease,box-shadow .2s ease}
+    .order-card:hover{transform:translateY(-2px);box-shadow:0 16px 36px rgba(15,23,42,.12)}
+    .order-card::before{content:"";position:absolute;left:0;top:0;width:4px;height:100%;background:linear-gradient(180deg,#94a3b8,#cbd5f5)}
+    .order-card.success::before{background:linear-gradient(180deg,#22c55e,#86efac)}
+    .order-card.failed::before{background:linear-gradient(180deg,#ef4444,#fca5a5)}
+    .order-card.pending::before{background:linear-gradient(180deg,#f59e0b,#fde68a)}
+    .order-card .card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px}
+    .order-card .station{font-size:15px;font-weight:800;color:#0f172a;letter-spacing:.2px}
+    .order-card .sub{font-size:12px;color:#64748b}
+    .order-card .amount{font-size:14px;font-weight:800;color:#fff;background:#0f172a;padding:4px 10px;border-radius:999px}
+    .order-card .badges{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+    .order-card .pill{border:1px solid #e2e8f0;background:#f8fafc;color:#334155;font-size:12px;border-radius:999px;padding:2px 8px;font-weight:600}
+    .meta-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:6px 10px;font-size:12px;color:#475569}
+    .meta-item{display:flex;gap:6px;align-items:baseline}
+    .meta-item .label{color:#94a3b8}
+    .meta-item .value{color:#334155;font-weight:600}
+    .meta-item.full{grid-column:1/-1}
+    @keyframes cardIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+    @media (max-width:960px){.grid{grid-template-columns:1fr}}
+    :root{
+      --font-sans:"HarmonyOS Sans SC","MiSans","PingFang SC","Microsoft YaHei",sans-serif;
+      --accent-blue:#1f436a;
+      --accent-blue-deep:#102038;
+      --accent-teal:#0f766e;
+      --line-soft:rgba(203,213,225,.72);
+      --surface-glass:rgba(255,255,255,.78);
+      --surface-solid:rgba(255,255,255,.94);
+      --shadow-card:0 24px 60px rgba(15,23,42,.10);
+    }
+    @keyframes adminLiftIn{
+      from{opacity:0;transform:translateY(12px);filter:blur(6px)}
+      to{opacity:1;transform:translateY(0);filter:blur(0)}
+    }
+    html{scroll-behavior:smooth}
+    body{
+      font-family:var(--font-sans);
+      position:relative;
+      overflow-x:hidden;
+      background:
+        radial-gradient(130% 120% at 0% 0%,rgba(250,204,21,.18) 0%,rgba(250,204,21,0) 34%),
+        radial-gradient(120% 110% at 100% 0%,rgba(191,219,254,.24) 0%,rgba(191,219,254,0) 38%),
+        radial-gradient(90% 110% at 18% 100%,rgba(20,184,166,.12) 0%,rgba(20,184,166,0) 42%),
+        linear-gradient(180deg,#eef3f8 0%,#f6f8fb 100%);
+    }
+    .wrap{
+      position:relative;
+      z-index:1;
+      max-width:1320px;
+      gap:14px;
+    }
+    .wrap::before{right:-120px;top:-120px;width:340px;height:340px;background:radial-gradient(circle,rgba(59,130,246,.18) 0%,rgba(59,130,246,0) 72%)}
+    .wrap::after{left:-150px;bottom:-170px;width:380px;height:380px;background:radial-gradient(circle,rgba(13,148,136,.14) 0%,rgba(13,148,136,0) 72%)}
+    .card{
+      overflow:hidden;
+      padding:18px;
+      border-radius:24px;
+      border:1px solid rgba(255,255,255,.82);
+      background:
+        linear-gradient(180deg,rgba(255,255,255,.95) 0%,rgba(247,249,252,.92) 100%);
+      box-shadow:var(--shadow-card);
+      animation:adminLiftIn .55s cubic-bezier(.22,1,.36,1) both;
+    }
+    .card::before{
+      content:"";
+      position:absolute;
+      left:18px;
+      right:18px;
+      top:0;
+      height:1px;
+      background:linear-gradient(90deg,transparent,rgba(255,255,255,.94),transparent);
+      pointer-events:none;
+    }
+    h1,
+    .order-group-title,
+    .recharge-section h3{
+      font-weight:900;
+      letter-spacing:.015em;
+    }
+    .muted{color:#5c6a7b}
+    .controls,
+    .tabs,
+    .view-tabs{
+      gap:10px;
+    }
+    input,select,button{
+      border-radius:16px;
+      padding:10px 14px;
+      font-family:inherit;
+      transition:border-color .2s ease,box-shadow .2s ease,transform .2s ease,background .2s ease,color .2s ease,filter .2s ease;
+    }
+    input,select{
+      background:rgba(255,255,255,.86);
+      border-color:rgba(203,213,225,.78);
+    }
+    input:focus,select:focus{
+      outline:none;
+      border-color:rgba(37,99,235,.42);
+      box-shadow:0 0 0 4px rgba(59,130,246,.12),0 12px 28px rgba(15,23,42,.06);
+    }
+    button{
+      background:linear-gradient(135deg,var(--accent-blue-deep) 0%,var(--accent-blue) 52%,var(--accent-blue-deep) 100%);
+      background-size:180% 180%;
+      box-shadow:0 14px 30px rgba(15,23,42,.16);
+    }
+    button:hover{
+      background-position:100% 50%;
+      filter:saturate(1.05);
+    }
+    button.secondary{
+      background:rgba(255,255,255,.88);
+      border:1px solid rgba(203,213,225,.78);
+      color:var(--text);
+      box-shadow:0 10px 22px rgba(15,23,42,.05);
+    }
+    .nav a{
+      padding:8px 14px;
+      background:rgba(255,255,255,.74);
+      border-color:var(--line-soft);
+      backdrop-filter:blur(12px);
+      transition:transform .2s ease,box-shadow .2s ease,background .2s ease,color .2s ease,border-color .2s ease;
+    }
+    .nav a:hover{
+      transform:translateY(-1px);
+      box-shadow:0 12px 26px rgba(15,23,42,.08);
+      color:var(--text);
+    }
+    .nav a.active{
+      background:linear-gradient(135deg,var(--accent-blue-deep) 0%,var(--accent-blue) 100%);
+      border-color:#16365b;
+      color:#fff;
+      box-shadow:0 14px 30px rgba(15,23,42,.16);
+    }
+    .grid{
+      grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+      gap:10px;
+    }
+    .stat{
+      position:relative;
+      overflow:hidden;
+      padding:14px 14px 16px;
+      border-radius:18px;
+      border-color:rgba(203,213,225,.74);
+      background:
+        linear-gradient(180deg,rgba(255,255,255,.98) 0%,rgba(246,249,252,.94) 100%);
+      box-shadow:0 12px 30px rgba(15,23,42,.06);
+    }
+    .stat::before{
+      content:"";
+      position:absolute;
+      inset:0 0 auto 0;
+      height:4px;
+      background:linear-gradient(90deg,var(--accent-blue-deep),#60a5fa,#f59e0b);
+    }
+    .stat b{
+      font-size:28px;
+      letter-spacing:.01em;
+    }
+    .tabs,
+    .view-tabs{
+      padding:6px;
+      border-radius:999px;
+      border:1px solid rgba(203,213,225,.78);
+      background:linear-gradient(180deg,rgba(255,255,255,.84) 0%,rgba(241,245,249,.96) 100%);
+      box-shadow:0 12px 28px rgba(15,23,42,.06);
+      backdrop-filter:blur(14px);
+    }
+    .tab-btn,
+    .status-tab,
+    .view-tab{
+      border-radius:16px;
+      transition:transform .2s ease,box-shadow .2s ease,background .2s ease,color .2s ease,border-color .2s ease;
+    }
+    .tab-btn.active,
+    .status-tab.active,
+    .view-tab.active{
+      background:linear-gradient(135deg,var(--accent-blue-deep) 0%,var(--accent-blue) 100%);
+      border-color:#16365b;
+      color:#fff;
+      box-shadow:0 14px 30px rgba(15,23,42,.14);
+    }
+    .table-wrap{
+      border-radius:20px;
+      border:1px solid rgba(203,213,225,.72);
+      background:rgba(255,255,255,.72);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.9);
+    }
+    th,td{
+      border-bottom-color:rgba(226,232,240,.92);
+    }
+    th{
+      background:rgba(248,250,252,.92);
+      backdrop-filter:blur(12px);
+      letter-spacing:.02em;
+    }
+    tbody tr{
+      transition:background .18s ease,transform .18s ease;
+    }
+    tbody tr:hover{
+      background:linear-gradient(180deg,rgba(248,250,252,.98) 0%,rgba(241,245,249,.96) 100%);
+      transform:translateY(-1px);
+    }
+    .recharge-section,
+    .recharge-group,
+    .order-card,
+    .summary-card{
+      border-color:rgba(203,213,225,.74);
+      box-shadow:0 12px 28px rgba(15,23,42,.06);
+    }
+    .recharge-section{
+      border-radius:18px;
+      background:linear-gradient(180deg,rgba(255,255,255,.98) 0%,rgba(246,249,252,.94) 100%);
+    }
+    .recharge-group{
+      border-style:solid;
+      border-radius:16px;
+      background:rgba(255,255,255,.8);
+    }
+    .order-card{
+      border-radius:18px;
+      background:linear-gradient(180deg,rgba(255,255,255,.98) 0%,rgba(246,249,252,.94) 100%);
+    }
+    .order-card .amount{
+      background:linear-gradient(135deg,var(--accent-blue-deep) 0%,var(--accent-blue) 100%);
+      box-shadow:0 12px 24px rgba(15,23,42,.16);
+    }
+    #pane-userView{
+      background:
+        radial-gradient(120% 120% at 0% 0%,rgba(250,204,21,.18) 0%,rgba(250,204,21,0) 38%),
+        radial-gradient(120% 120% at 100% 0%,rgba(191,219,254,.22) 0%,rgba(191,219,254,0) 42%),
+        linear-gradient(180deg,rgba(248,250,252,.98) 0%,rgba(255,255,255,.96) 45%,rgba(241,245,249,.94) 100%);
+      border-color:rgba(203,213,225,.74);
+    }
+    .summary-card{
+      border-radius:18px;
+      background:linear-gradient(180deg,rgba(255,255,255,.96) 0%,rgba(246,249,252,.92) 100%);
+    }
+    .summary-card.amount .value{color:#1d4ed8}
+    @media (max-width:760px){
+      body{padding:10px}
+      .card{
+        border-radius:20px;
+        padding:16px;
+      }
+      .top{
+        align-items:flex-start;
+      }
+      .controls{
+        width:100%;
+      }
+      .controls input,
+      .controls select,
+      .controls button{
+        width:100%;
+      }
+      .status-tabs{
+        grid-template-columns:1fr;
+      }
+      .view-tabs{
+        width:100%;
+      }
+    }
+    @media (prefers-reduced-motion:reduce){
+      html{scroll-behavior:auto}
+      *,*::before,*::after{
+        animation:none!important;
+        transition:none!important;
+      }
+    }
   </style>
 </head>
 <body>
@@ -27,11 +365,17 @@
     <section class="card top">
       <div>
         <h1>订单后台</h1>
-        <div class="muted">查看订单、手机号、充值申请和失败重试。</div>
+        <div class="muted">订单总览与充值申请审核。</div>
+      </div>
+      <div class="nav">
+        <a id="nav-orders" class="active" href="/admin/orders">订单总览</a>
+        <a id="nav-users" href="/admin/users">用户总览</a>
       </div>
       <div class="controls">
-        <input id="token" placeholder="管理员口令（若已设置）">
-        <input id="password" type="password" placeholder="后台密码（若已设置）">
+        <input id="username" placeholder="后台用户名">
+        <input id="password" type="password" placeholder="后台密码">
+        <button class="secondary" id="login" type="button">登录后台</button>
+        <button class="secondary" id="logout" type="button">退出登录</button>
         <input id="deviceCode" placeholder="设备编码筛选">
         <select id="statusFilter">
           <option value="">全部状态</option>
@@ -53,18 +397,29 @@
         <div class="stat"><div class="muted">成功</div><b id="s_success">0</b></div>
         <div class="stat"><div class="muted">失败</div><b id="s_failed">0</b></div>
         <div class="stat"><div class="muted">待审核充值</div><b id="s_recharge_pending">0</b></div>
+        <div class="stat"><div class="muted">访问数</div><b id="s_visit_count">0</b></div>
+        <div class="stat"><div class="muted">注册数</div><b id="s_register_count">0</b></div>
+        <div class="stat"><div class="muted">首单数</div><b id="s_first_order_count">0</b></div>
+        <div class="stat"><div class="muted">充值人数</div><b id="s_recharge_user_count">0</b></div>
+        <div class="stat"><div class="muted">7天复购数</div><b id="s_repeat_7d_count">0</b></div>
       </div>
       <div class="muted" id="meta" style="margin-top:8px;">网关模式：-</div>
     </section>
 
     <section class="card">
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="orders" type="button">订单总览</button>
+        <button class="tab-btn" data-tab="recharges" type="button">充值申请</button>
+        <button class="tab-btn" data-tab="userView" type="button">用户订单视图</button>
+      </div>
+      <div class="muted" style="margin-top:8px;">提示：支持在顶部筛选条件后刷新，页面会定时自动刷新数据。</div>
+    </section>
+
+    <section class="card pane" id="pane-orders">
       <div class="top" style="margin-bottom:10px;">
         <div>
-          <h1 style="font-size:18px;">已注册账号</h1>
-          <div class="muted">这里会列出所有已注册用户，不要求先下单。</div>
-        </div>
-        <div class="controls">
-          <button class="secondary" id="refreshUsers" type="button">刷新账号</button>
+          <h1 style="font-size:18px;">订单总览</h1>
+          <div class="muted">查看全部订单与处理结果（含实时充电状态与结束原因）。</div>
         </div>
       </div>
       <div class="table-wrap">
@@ -73,67 +428,30 @@
             <tr>
               <th>ID</th>
               <th>手机号</th>
-              <th>余额</th>
-              <th>注册时间</th>
+              <th>充电位</th>
+              <th>金额</th>
+              <th>订单状态</th>
+              <th>实时状态</th>
+              <th>结束原因</th>
+              <th>结果</th>
+              <th>平台单号</th>
+              <th>创建时间</th>
+              <th>操作</th>
             </tr>
           </thead>
-          <tbody id="userTbody"></tbody>
+          <tbody id="tbody"></tbody>
         </table>
       </div>
     </section>
 
-    <section id="tokenSection" class="card split">
-      <div>
-        <div class="top" style="margin-bottom:10px;">
-          <div>
-            <h1 style="font-size:18px;">支付码发放</h1>
-            <div class="muted">如果你仍在使用支付码模式，可以先搜索用户，再为指定金额发放支付码。</div>
-          </div>
-        </div>
-        <div class="controls">
-          <input id="userQuery" placeholder="搜索手机号（包含）">
-          <button class="secondary" id="searchUsers" type="button">搜索</button>
-          <span class="pill">用户 ID：<b id="selectedUserId">-</b></span>
-        </div>
-        <div class="controls" style="margin-top:10px;">
-          <input id="tokenAmount" placeholder="金额（例如：1、2、3、4）" style="max-width:260px;">
-          <button id="issueToken" type="button">发放支付码</button>
-        </div>
-        <div class="controls" style="margin-top:10px;">
-          <input id="manualBalanceAmount" placeholder="手动充值金额（可正可负）" style="max-width:260px;">
-          <input id="manualBalanceReason" placeholder="备注，例如：后台补单" style="max-width:260px;">
-          <button id="adjustBalance" type="button">手动充值余额</button>
-        </div>
-        <div class="controls" style="margin-top:10px;">
-          <input id="resetPasswordValue" type="password" placeholder="重置后的新密码" style="max-width:260px;">
-          <button id="resetPassword" type="button">重置用户密码</button>
-        </div>
-        <div class="result" id="tokenResult" style="display:none;"></div>
-        <div class="result" id="userResult" style="display:none;"></div>
-      </div>
-      <div>
-        <div class="top" style="margin-bottom:10px;">
-          <div>
-            <h1 style="font-size:18px;">操作提示</h1>
-            <div class="muted">如果启用的是余额模式，请优先处理“充值申请”。</div>
-          </div>
-        </div>
-        <div class="muted">
-          <div>支付码接口：<code>POST /api/admin/payments/issue</code></div>
-          <div>充值申请接口：<code>GET /api/admin/recharge-requests</code></div>
-          <div>用户搜索接口：<code>GET /api/admin/users?q=...</code></div>
-        </div>
-      </div>
-    </section>
-
-    <section class="card">
+    <section class="card pane hidden" id="pane-recharges">
       <div class="top" style="margin-bottom:10px;">
         <div>
           <h1 style="font-size:18px;">充值申请</h1>
-          <div class="muted">审核通过后，系统会自动把充值金额补到用户余额。</div>
+          <div class="muted">审核通过后系统自动补余额。</div>
         </div>
         <div class="controls">
-          <select id="rechargeStatusFilter">
+          <select id="rechargeStatusFilter" class="hidden">
             <option value="">全部状态</option>
             <option value="PENDING">PENDING</option>
             <option value="APPROVED">APPROVED</option>
@@ -142,94 +460,276 @@
           <button class="secondary" id="refreshRechargeRequests" type="button">刷新充值申请</button>
         </div>
       </div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>手机号</th>
-              <th>金额</th>
-              <th>方式</th>
-              <th>状态</th>
-              <th>备注</th>
-              <th>申请时间</th>
-              <th>审核说明</th>
-              <th>操作</th>
-            </tr>
-          </thead>
-          <tbody id="rechargeTbody"></tbody>
-        </table>
+      <div class="status-tabs" id="rechargeStatusTabs">
+        <button class="status-tab active" data-status="PENDING" type="button">待处理</button>
+        <button class="status-tab" data-status="APPROVED" type="button">已通过</button>
+        <button class="status-tab" data-status="REJECTED" type="button">已驳回</button>
       </div>
+      <div id="rechargeGroups" class="recharge-groups"></div>
     </section>
 
-    <section class="card table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>手机号</th>
-            <th>站点</th>
-            <th>设备编码</th>
-            <th>插座</th>
-            <th>金额</th>
-            <th>状态</th>
-            <th>结果</th>
-            <th>平台单号</th>
-            <th>创建时间</th>
-            <th>操作</th>
-          </tr>
-        </thead>
-        <tbody id="tbody"></tbody>
-      </table>
+    <section class="card pane hidden" id="pane-userView">
+      <div class="top" style="margin-bottom:10px;">
+        <div>
+          <h1 style="font-size:18px;">用户订单视图</h1>
+          <div class="muted">按手机号分组展示订单，便于核对用户端【我的订单】显示是否正常。</div>
+        </div>
+      </div>
+      <div class="user-view-toolbar">
+        <div class="view-tabs" id="userViewTabs">
+          <button class="view-tab active" data-filter="ALL" type="button">全部</button>
+          <button class="view-tab" data-filter="SUCCESS" type="button">成功</button>
+          <button class="view-tab" data-filter="FAILED" type="button">失败/其他</button>
+        </div>
+        <div class="view-meta" id="userViewMeta">当前筛选：全部订单</div>
+      </div>
+      <div id="userOrdersWrap" class="order-groups"></div>
     </section>
   </div>
 
   <script>
-    const tokenInput=document.getElementById("token");
+    const usernameInput=document.getElementById("username");
     const passwordInput=document.getElementById("password");
+    const loginButton=document.getElementById("login");
+    const logoutButton=document.getElementById("logout");
     const deviceCodeInput=document.getElementById("deviceCode");
     const statusFilter=document.getElementById("statusFilter");
     const meta=document.getElementById("meta");
     const tbody=document.getElementById("tbody");
-    const userQuery=document.getElementById("userQuery");
-    const selectedUserId=document.getElementById("selectedUserId");
-    const tokenAmount=document.getElementById("tokenAmount");
-    const manualBalanceAmount=document.getElementById("manualBalanceAmount");
-    const manualBalanceReason=document.getElementById("manualBalanceReason");
-    const resetPasswordValue=document.getElementById("resetPasswordValue");
-    const tokenResult=document.getElementById("tokenResult");
-    const userResult=document.getElementById("userResult");
     const rechargeStatusFilter=document.getElementById("rechargeStatusFilter");
-    const rechargeTbody=document.getElementById("rechargeTbody");
-    const userTbody=document.getElementById("userTbody");
-    tokenInput.value="__ADMIN_TOKEN__";
-    let currentUserId=null;
+    const rechargeGroups=document.getElementById("rechargeGroups");
+    const userOrdersWrap=document.getElementById("userOrdersWrap");
+    const rechargeStatusTabs=[...document.querySelectorAll("#rechargeStatusTabs .status-tab")];
+    const userViewTabs=[...document.querySelectorAll("#userViewTabs .view-tab")];
+    const userViewMeta=document.getElementById("userViewMeta");
+    let userViewFilter="ALL";
+    let lastOrders=[];
+    const urlParams=new URLSearchParams(window.location.search);
+    let adminReady=false;
+    let refreshBusy=false;
 
-    function withToken(url){const token=tokenInput.value.trim();const password=passwordInput.value.trim();const u=new URL(url,window.location.origin);if(token)u.searchParams.set("token",token);if(password)u.searchParams.set("password",password);return u.pathname+u.search}
+    const panes={orders:document.getElementById("pane-orders"),recharges:document.getElementById("pane-recharges"),userView:document.getElementById("pane-userView")};
+    const tabButtons=[...document.querySelectorAll("[data-tab]")];
+    function setActiveTab(key){const active=String(key||"orders");tabButtons.forEach((btn)=>btn.classList.toggle("active",btn.dataset.tab===active));Object.entries(panes).forEach(([name,el])=>{if(!el)return;el.classList.toggle("hidden",name!==active)})}
+    tabButtons.forEach((btn)=>btn.onclick=()=>setActiveTab(btn.dataset.tab));
+    setActiveTab(urlParams.get("tab")||"orders");
+
+    function syncRechargeStatusTabs(){
+      const current=String(rechargeStatusFilter.value||"").toUpperCase();
+      const active=current||"PENDING";
+      if(!current)rechargeStatusFilter.value=active;
+      rechargeStatusTabs.forEach((btn)=>btn.classList.toggle("active",(btn.dataset.status||"")===active));
+    }
+
+    rechargeStatusTabs.forEach((btn)=>btn.addEventListener("click",()=>{
+      const next=String(btn.dataset.status||"").toUpperCase();
+      rechargeStatusFilter.value=next;
+      rechargeStatusTabs.forEach((b)=>b.classList.toggle("active",b===btn));
+      refreshAll();
+    }));
+
+    function syncUserViewTabs(next){
+      if(next)userViewFilter=next;
+      const active=userViewFilter||"ALL";
+      userViewTabs.forEach((btn)=>btn.classList.toggle("active",(btn.dataset.filter||"")===active));
+      if(userViewMeta){
+        const labels={ALL:"全部订单",SUCCESS:"成功订单",FAILED:"失败/其他"};
+        userViewMeta.textContent=`当前筛选：${labels[active]||labels.ALL}`;
+      }
+    }
+
+    userViewTabs.forEach((btn)=>btn.addEventListener("click",()=>{
+      const next=String(btn.dataset.filter||"ALL").toUpperCase();
+      syncUserViewTabs(next);
+      if(lastOrders.length)renderUserOrders(lastOrders);
+    }));
+    syncUserViewTabs();
+
+    function buildAdminLink(path){return path}
+
+    function syncNavLinks(){
+      const ordersLink=document.getElementById("nav-orders");
+      const usersLink=document.getElementById("nav-users");
+      if(ordersLink)ordersLink.href=buildAdminLink("/admin/orders");
+      if(usersLink)usersLink.href=buildAdminLink("/admin/users");
+    }
+    syncNavLinks();
+
+    function escapeHtml(value){return String(value??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;").replace(/'/g,"&#39;")}
+    const fmt=(value)=>{if(!value)return"-";const d=new Date(value);return Number.isNaN(d.getTime())?String(value):d.toLocaleString()};
+    function withToken(url){const u=new URL(url,window.location.origin);return u.pathname+u.search}
     function statusLabel(status){return ({SUCCESS:"成功",FAILED:"失败",PENDING:"待处理",PROCESSING:"处理中",APPROVED:"已通过",REJECTED:"已驳回"})[String(status||"").toUpperCase()]||String(status||"-")}
-    async function requestJson(url,options){const resp=await fetch(withToken(url),options);const text=await resp.text();let data;try{data=text?JSON.parse(text):{}}catch{data={raw:text}}if(!resp.ok)throw new Error(data.detail||data.raw||`HTTP ${resp.status}`);return data}
-    function showBox(el,text){el.style.display="block";el.textContent=text}
+    function setAuthState(ready,message){adminReady=!!ready;if(loginButton)loginButton.disabled=adminReady;if(logoutButton)logoutButton.disabled=!adminReady;if(usernameInput)usernameInput.disabled=adminReady;if(passwordInput)passwordInput.disabled=adminReady;if(message)meta.textContent=message}
+    async function requestJson(url,options={}){const headers={...(options.headers||{})};const resp=await fetch(withToken(url),{credentials:"same-origin",...options,headers});const text=await resp.text();let data;try{data=text?JSON.parse(text):{}}catch{data={raw:text}}if(!resp.ok){if(resp.status===401)setAuthState(false,"请先登录后台后再加载数据");throw new Error(data.detail||data.raw||`HTTP ${resp.status}`)}return data}
+    const stationNoFromName=(name)=>Number((String(name||"").match(/(\\d+)号站/)||[])[1]||0)||0;
+    function regionFromStationName(name){const text=String(name||"");if(text.includes("东盟"))return"东盟";if(text.includes("学术交流中心"))return"学术交流中心";if(text.includes("19栋"))return"19栋";if(text.includes("综合楼")||text.includes("图书馆"))return"综合楼";return"-"}
+    function slotCode(order){const no=stationNoFromName(order?.station_name);const sid=Number(order?.socket_no||0)||0;const device=String(order?.device_code||"").trim();if(no>0&&sid>0)return `${no}-${sid}`;if(no>0)return String(no);if(device&&sid>0)return `${device}-${sid}`;if(sid>0)return `${sid}号`;return"-"}
+    function realtimeChargeText(order){const status=String(order?.status||"").toUpperCase();const charge=String(order?.charge_state||"").toUpperCase();const realtime=String(order?.realtime_status||"").trim();if(status==="FAILED")return"失败";if(charge.startsWith("ENDED"))return"已结束";if(realtime==="使用中")return"充电中";if(charge.startsWith("CHARGING"))return"充电中";if(realtime==="空闲")return"空闲";if(status==="PENDING")return"待处理";if(status==="PROCESSING")return"处理中";return realtime||"-"}
+    function chargeSlotLabel(order){const stationName=String(order?.station_name||"").trim();const sid=Number(order?.socket_no||0)||0;const device=String(order?.device_code||"").trim();if(stationName&&sid>0)return `${stationName}-${sid}号`;if(stationName)return stationName;if(device&&sid>0)return `${device}-${sid}号`;if(device)return device;if(sid>0)return `${sid}号`;return"-"}
+    function endReasonText(order){const official=order?.official_detail||{};const reason=String(official.order_end_message||order?.charge_stop_reason||"").trim();return reason||"-"}
 
-    async function searchUsers(){const q=(userQuery.value||"").trim();if(!q){showBox(userResult,"请输入手机号关键字。");return}const users=await requestJson(`/api/admin/users?q=${encodeURIComponent(q)}&limit=50`);if(!users.length){currentUserId=null;selectedUserId.textContent="-";showBox(userResult,"没有匹配到用户。");return}currentUserId=users[0].id;selectedUserId.textContent=String(currentUserId);showBox(userResult,users.map((u)=>`#${u.id} 手机号=${u.phone} 余额=${Number(u.balance_yuan||0).toFixed(2)}`).join("\n"))}
-    async function issueToken(){if(!currentUserId){showBox(tokenResult,"请先搜索并选定一个用户。");return}const amt=Number(tokenAmount.value||"0");if(!Number.isFinite(amt)||amt<=0){showBox(tokenResult,"请输入正确金额。");return}const data=await requestJson("/api/admin/payments/issue",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({user_id:currentUserId,amount_yuan:amt})});showBox(tokenResult,`支付码：${data.token||""}\n过期时间：${data.expires_at||"-"}\n金额：¥${amt.toFixed(2)}`)}
-    async function adjustBalance(){if(!currentUserId){showBox(tokenResult,"请先搜索并选定一个用户。");return}const amt=Number(manualBalanceAmount.value||"0");if(!Number.isFinite(amt)||amt===0){showBox(tokenResult,"请输入正确的充值金额。");return}const reason=(manualBalanceReason.value||"").trim()||"admin_adjust";const data=await requestJson(`/api/admin/users/${currentUserId}/balance`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({delta_yuan:amt,reason})});showBox(tokenResult,`余额已调整：${amt>0?"+":""}${amt.toFixed(2)}\n当前余额：¥${Number(data.balance_yuan||0).toFixed(2)}`);await refreshAll()}
-    async function resetPassword(){if(!currentUserId){showBox(tokenResult,"请先搜索并选定一个用户。");return}const newPassword=(resetPasswordValue.value||"").trim();if(newPassword.length<6){showBox(tokenResult,"请输入至少6位的新密码。");return}const data=await requestJson(`/api/admin/users/${currentUserId}/password`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({new_password:newPassword})});resetPasswordValue.value="";showBox(tokenResult,`已重置用户密码：#${data.user_id}\n手机号：${data.phone||"-"}\n新密码已生效。`)}
-    function setStats(stats){document.getElementById("s_total").textContent=stats.total??0;document.getElementById("s_pending").textContent=stats.pending??0;document.getElementById("s_processing").textContent=stats.processing??0;document.getElementById("s_success").textContent=stats.success??0;document.getElementById("s_failed").textContent=stats.failed??0;document.getElementById("s_recharge_pending").textContent=stats.recharge_pending??0;document.getElementById("tokenSection").style.display=(stats.payment_mode==="token"?"grid":"none");meta.textContent=`网关模式：${stats.gateway_mode||"-"} | 支付模式：${stats.payment_mode||"-"} | 最新刷新：${new Date().toLocaleString()}`}
-    function renderUsers(users){if(!users.length){userTbody.innerHTML='<tr><td colspan="4" class="muted">暂无注册账号</td></tr>';return}userTbody.innerHTML=users.map((u)=>`<tr><td>${u.id}</td><td>${u.phone}</td><td>¥${Number(u.balance_yuan||0).toFixed(2)}</td><td>${new Date(u.created_at).toLocaleString()}</td></tr>`).join("")}
-    function renderOrders(orders){if(!orders.length){tbody.innerHTML='<tr><td colspan="11" class="muted">暂无订单</td></tr>';return}tbody.innerHTML=orders.map((o)=>`<tr><td>${o.id}</td><td>${o.phone||"-"}</td><td>${o.station_name||"-"}</td><td>${o.device_code}</td><td>${o.socket_no}号</td><td>¥${Number(o.total_cost_yuan||o.amount_yuan).toFixed(2)}</td><td><span class="status ${o.status}">${statusLabel(o.status)}</span></td><td>${o.result_message||"-"}</td><td>${o.vendor_order_id||"-"}</td><td>${new Date(o.created_at).toLocaleString()}</td><td>${o.status==="FAILED"?`<button class="secondary" onclick="retryOrder(${o.id})">重试</button>`:"-"}</td></tr>`).join("")}
-    function renderRechargeRequests(rows){const methodLabel={alipay_auto:'支付宝自动充值',wechat_manual:'微信手动充值',wxpay:'微信手动充值',wxpay_auto:'微信在线充值',alipay:'支付宝自动充值',manual_transfer:'手动付款待审核'};if(!rows.length){rechargeTbody.innerHTML='<tr><td colspan="9" class="muted">暂无充值申请</td></tr>';return}rechargeTbody.innerHTML=rows.map((r)=>`<tr><td>${r.id}</td><td>${r.phone||r.user_id}</td><td>¥${Number(r.amount_yuan).toFixed(2)}${Number(r.bonus_yuan||0)>0?` + 赠送¥${Number(r.bonus_yuan).toFixed(2)}`:""}</td><td>${methodLabel[r.payment_method]||r.payment_method||"-"}</td><td><span class="status ${r.status}">${statusLabel(r.status)}</span></td><td>${r.note||"-"}</td><td>${new Date(r.created_at).toLocaleString()}</td><td>${r.review_note||"-"}</td><td>${r.status==="PENDING"?`<button class="secondary" onclick="reviewRechargeRequest(${r.id}, true)">通过</button> <button class="secondary" onclick="reviewRechargeRequest(${r.id}, false)">驳回</button>`:"-"}</td></tr>`).join("")}
+    function setStats(stats){document.getElementById("s_total").textContent=stats.total??0;document.getElementById("s_pending").textContent=stats.pending??0;document.getElementById("s_processing").textContent=stats.processing??0;document.getElementById("s_success").textContent=stats.success??0;document.getElementById("s_failed").textContent=stats.failed??0;document.getElementById("s_recharge_pending").textContent=stats.recharge_pending??0;document.getElementById("s_visit_count").textContent=stats.visit_count??0;document.getElementById("s_register_count").textContent=stats.register_count??0;document.getElementById("s_first_order_count").textContent=stats.first_order_count??0;document.getElementById("s_recharge_user_count").textContent=stats.recharge_user_count??0;document.getElementById("s_repeat_7d_count").textContent=stats.repeat_7d_count??0;meta.textContent=`网关模式：${stats.gateway_mode||"-"} | 支付模式：${stats.payment_mode||"-"} | 运营指标为累计值，7天复购指首单后 7 天内再次下单用户数 | 最新刷新：${new Date().toLocaleString()}`}
+    function renderOrders(orders){if(!orders.length){tbody.innerHTML='<tr><td colspan="11" class="muted">暂无订单</td></tr>';return}tbody.innerHTML=orders.map((o)=>{const slot=chargeSlotLabel(o);const realtime=realtimeChargeText(o);const endReason=endReasonText(o);const total=Number(o.total_cost_yuan||o.amount_yuan||0);return `<tr><td>${o.id}</td><td>${escapeHtml(o.phone||"-")}</td><td>${escapeHtml(slot)}</td><td>¥${total.toFixed(2)}</td><td><span class="status ${o.status}">${statusLabel(o.status)}</span></td><td>${escapeHtml(realtime)}</td><td>${escapeHtml(endReason)}</td><td>${escapeHtml(o.result_message||"-")}</td><td>${escapeHtml(o.vendor_order_id||"-")}</td><td>${escapeHtml(fmt(o.created_at))}</td><td>${String(o.status||"").toUpperCase()==="FAILED"?`<button class="secondary" onclick="retryOrder(${o.id})">重试</button>`:"-"}</td></tr>`}).join("")}
+
+    function renderOrderCard(o,index,tone){
+      const slot=chargeSlotLabel(o);
+      const realtime=realtimeChargeText(o);
+      const endReason=endReasonText(o);
+      const phone=String(o.phone||"-");
+      const fee=Number(o.service_fee_yuan||0);
+      const total=Number(o.total_cost_yuan||o.amount_yuan||0);
+      const official=o.official_detail||{};
+      const officialNo=String(official.cid||"").trim();
+      const work=official.work_time_minutes!==null&&official.work_time_minutes!==undefined?Number(official.work_time_minutes):null;
+      const endTime=String(o.charge_finished_at||official.end_time||"").trim();
+      const vendorNo=String(o.vendor_order_id||"").trim();
+      const statusText=escapeHtml(statusLabel(o.status));
+      const statusClass=escapeHtml(o.status);
+      const statusUpper=String(o.status||"").toUpperCase();
+      const cardTone=tone||(statusUpper==="SUCCESS"?"success":(statusUpper==="FAILED"?"failed":"pending"));
+      const endTimeValue=endTime?escapeHtml(fmt(endTime)):"-";
+      const workValue=(work!==null&&Number.isFinite(work))?`${work} 分钟`:"-";
+      const resultValue=String(o.result_message||"-");
+      const metaItems=[
+        {label:"手机",value:phone},
+        {label:"充电位",value:slot},
+        {label:"实时",value:realtime},
+        {label:"结束原因",value:endReason,full:true},
+        {label:"创建",value:fmt(o.created_at)},
+        {label:"结束",value:endTimeValue},
+        {label:"时长",value:workValue},
+        {label:"服务费",value:`¥${fee.toFixed(2)}`},
+        {label:"结果",value:resultValue,full:true},
+      ];
+      if(officialNo)metaItems.push({label:"官方单号",value:officialNo});
+      if(vendorNo)metaItems.push({label:"平台单号",value:vendorNo});
+      return `
+        <article class="order-card ${cardTone}" style="--i:${Number(index||0)}">
+          <div class="card-head">
+            <div>
+              <div class="station">${escapeHtml(o.station_name||"-")}</div>
+              <div class="sub">#${escapeHtml(o.id)} · ${escapeHtml(phone)}</div>
+            </div>
+            <div class="amount">¥${total.toFixed(2)}</div>
+          </div>
+          <div class="badges">
+            <span class="status ${statusClass}">${statusText}</span>
+            <span class="pill">${escapeHtml(slot)}</span>
+            <span class="pill">${escapeHtml(realtime)}</span>
+          </div>
+          <div class="meta-grid">
+            ${metaItems.map((item)=>`<div class="meta-item${item.full?" full":""}"><span class="label">${escapeHtml(item.label)}</span><span class="value">${escapeHtml(item.value)}</span></div>`).join("")}
+          </div>
+        </article>
+      `.trim()
+    }
+
+    function renderUserOrders(orders){
+      if(!userOrdersWrap)return;
+      const list=Array.isArray(orders)?orders:[];
+      if(!list.length){
+        userOrdersWrap.innerHTML='<div class="muted">暂无订单</div>';
+        return;
+      }
+      const sorted=[...list].sort((a,b)=>{
+        const at=new Date(a.created_at||0).getTime();
+        const bt=new Date(b.created_at||0).getTime();
+        if(Number.isFinite(at)&&Number.isFinite(bt)&&bt!==at)return bt-at;
+        return Number(b.id||0)-Number(a.id||0);
+      });
+      const success=sorted.filter((o)=>String(o.status||"").toUpperCase()==="SUCCESS");
+      const failed=sorted.filter((o)=>String(o.status||"").toUpperCase()!=="SUCCESS");
+      const totalAmount=sorted.reduce((sum,o)=>sum+Number(o.total_cost_yuan||o.amount_yuan||0),0);
+      const active=userViewFilter||"ALL";
+      let filtered=sorted;
+      if(active==="SUCCESS")filtered=success;
+      if(active==="FAILED")filtered=failed;
+      const cardsHtml=filtered.map((o,i)=>renderOrderCard(o,i)).join("");
+      const summary=`
+        <div class="user-summary">
+          <div class="summary-card">
+            <div class="label">全部订单</div>
+            <div class="value">${sorted.length}</div>
+          </div>
+          <div class="summary-card success">
+            <div class="label">成功订单</div>
+            <div class="value">${success.length}</div>
+          </div>
+          <div class="summary-card fail">
+            <div class="label">失败/其他</div>
+            <div class="value">${failed.length}</div>
+          </div>
+          <div class="summary-card amount">
+            <div class="label">合计金额</div>
+            <div class="value">¥${totalAmount.toFixed(2)}</div>
+          </div>
+        </div>
+      `.trim();
+      const titleMap={ALL:"全部订单",SUCCESS:"成功订单",FAILED:"失败/其他"};
+      const title=titleMap[active]||titleMap.ALL;
+      if(userViewMeta)userViewMeta.textContent=`当前筛选：${title} · ${filtered.length} 笔`;
+      userOrdersWrap.innerHTML=`
+        <div class="user-view-wrap">
+          ${summary}
+          <div class="order-group-title">${title} <span class="muted">（${filtered.length}）</span></div>
+          <div class="order-grid">${cardsHtml||'<div class="muted">暂无订单</div>'}</div>
+        </div>
+      `.trim();
+    }
+    function renderRechargeRequests(rows){
+      const methodLabel={alipay_auto:'支付宝自动充值',wechat_manual:'微信手动充值',wxpay:'微信手动充值',wxpay_auto:'微信在线充值',alipay:'支付宝自动充值',manual_transfer:'手动付款待审核'};
+      if(!rows.length){
+        rechargeGroups.innerHTML='<div class="muted">暂无充值申请</div>';
+        return;
+      }
+      const statusSections=[{key:"PENDING",label:"待处理"},{key:"APPROVED",label:"已通过"},{key:"REJECTED",label:"已驳回"}];
+      const byStatus=new Map();
+      rows.forEach((r)=>{const key=String(r.status||"").toUpperCase();const list=byStatus.get(key)||[];list.push(r);byStatus.set(key,list)});
+      const fmtHour=(value)=>{
+        const d=new Date(value||"");
+        if(Number.isNaN(d.getTime()))return "未知时间";
+        const y=d.getFullYear();
+        const m=String(d.getMonth()+1).padStart(2,"0");
+        const day=String(d.getDate()).padStart(2,"0");
+        const h=String(d.getHours()).padStart(2,"0");
+        return `${y}-${m}-${day} ${h}:00`;
+      };
+      const renderGroupTable=(items)=>`<table class="recharge-group-table"><colgroup><col style="width:60px"><col style="width:140px"><col style="width:160px"><col style="width:170px"><col style="width:170px"><col><col style="width:90px"></colgroup><thead><tr><th>ID</th><th>金额 / 奖励</th><th>方式</th><th>申请时间</th><th>审核时间</th><th>审核说明</th><th>操作</th></tr></thead><tbody>${items.map((r)=>{const reviewed=r.reviewed_at?new Date(r.reviewed_at).toLocaleString():"-";const bonusCount=Number(r.bonus_free_charge_granted||r.bonus_free_charge_count||0);return `<tr><td>${r.id}</td><td>¥${Number(r.amount_yuan).toFixed(2)}${bonusCount>0?` + 免服务费${bonusCount}次`:""}</td><td>${methodLabel[r.payment_method]||r.payment_method||"-"}</td><td>${new Date(r.created_at).toLocaleString()}</td><td>${reviewed}</td><td class="note">${r.review_note||"-"}</td><td>${String(r.status||"").toUpperCase()==="PENDING"?`<button class="secondary" onclick="reviewRechargeRequest(${r.id}, true)">通过</button> <button class="secondary" onclick="reviewRechargeRequest(${r.id}, false)">驳回</button>`:"-"}</td></tr>`}).join("")}</tbody></table>`;
+      rechargeGroups.innerHTML=statusSections.map((section)=>{
+        const items=(byStatus.get(section.key)||[]).sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0));
+        if(!items.length)return "";
+        const groupMap=new Map();
+        items.forEach((r)=>{
+          const phone=String(r.phone||r.user_id||"-");
+          const hour=fmtHour(r.created_at);
+          const key=`${phone}__${hour}`;
+          const list=groupMap.get(key)||[];
+          list.push(r);
+          groupMap.set(key,list);
+        });
+        const groups=[...groupMap.entries()].map(([key,list])=>{
+          const [phone,hour]=key.split("__");
+          return `<div class="recharge-group"><div class="recharge-group-title">手机号：${escapeHtml(phone)} | 提交小时：${escapeHtml(hour)} | ${list.length} 笔</div>${renderGroupTable(list)}</div>`;
+        }).join("");
+        return `<div class="recharge-section"><h3>${section.label}（${items.length}）</h3>${groups}</div>`;
+      }).join("");
+    }
     async function reviewRechargeRequest(id,approve){const reviewNote=window.prompt("审核说明（可选）")||"";const action=approve?"approve":"reject";await requestJson(`/api/admin/recharge-requests/${id}/${action}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({review_note:reviewNote})});await refreshAll()}
     async function retryOrder(id){await requestJson(`/api/admin/orders/${id}/retry`,{method:"POST"});await refreshAll()}
     async function reloadGateway(){await requestJson("/api/admin/reload-gateway",{method:"POST"});await refreshAll()}
-    async function refreshAll(){try{const query=new URLSearchParams({limit:"200"});if(statusFilter.value.trim())query.set("status",statusFilter.value.trim());if(deviceCodeInput.value.trim())query.set("device_code",deviceCodeInput.value.trim());const rechargeQuery=new URLSearchParams({limit:"200"});if(rechargeStatusFilter.value.trim())rechargeQuery.set("status",rechargeStatusFilter.value.trim());const [stats,users,orders,recharges]=await Promise.all([requestJson("/api/admin/stats"),requestJson("/api/admin/users?limit=500"),requestJson(`/api/orders?${query.toString()}`),requestJson(`/api/admin/recharge-requests?${rechargeQuery.toString()}`)]);setStats(stats);renderUsers(users);renderOrders(orders);renderRechargeRequests(recharges)}catch(err){meta.textContent=`加载失败：${err.message}`}}
+    async function loginAdmin(){const username=usernameInput.value.trim();const password=passwordInput.value;const resp=await fetch("/api/admin/login",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({username,password})});const text=await resp.text();let data;try{data=text?JSON.parse(text):{}}catch{data={raw:text}}if(!resp.ok)throw new Error(data.detail||data.raw||`HTTP ${resp.status}`);setAuthState(true,`已登录后台：${data.username||username}`);await refreshAll()}
+    async function logoutAdmin(){await fetch("/api/admin/logout",{method:"POST",credentials:"same-origin"});setAuthState(false,"已退出后台，请重新登录");passwordInput.value="";usernameInput.disabled=false;passwordInput.disabled=false}
+    async function bootstrapAdmin(){try{const data=await requestJson("/api/admin/me");setAuthState(true,`已登录后台：${data.username||"-"}`);await refreshAll()}catch(err){setAuthState(false,"请先输入后台用户名和密码，再点击登录后台");tbody.innerHTML='<tr><td colspan="11" class="muted">请先登录后台</td></tr>';rechargeGroups.innerHTML="";userOrdersWrap.innerHTML=""}}
+
+    async function refreshAll(){if(!adminReady){meta.textContent="请先登录后台后再加载数据";return}if(refreshBusy)return;refreshBusy=true;try{const query=new URLSearchParams({limit:"200"});if(statusFilter.value.trim())query.set("status",statusFilter.value.trim());if(deviceCodeInput.value.trim())query.set("device_code",deviceCodeInput.value.trim());const rechargeQuery=new URLSearchParams({limit:"200"});if(rechargeStatusFilter.value.trim())rechargeQuery.set("status",rechargeStatusFilter.value.trim());const [stats,orders,recharges]=await Promise.all([requestJson("/api/admin/stats"),requestJson(`/api/orders?${query.toString()}`),requestJson(`/api/admin/recharge-requests?${rechargeQuery.toString()}`)]);lastOrders=Array.isArray(orders)?orders:[];setStats(stats);renderOrders(lastOrders);renderUserOrders(lastOrders);renderRechargeRequests(recharges)}catch(err){meta.textContent=`加载失败：${err.message}`}finally{refreshBusy=false}}
     window.retryOrder=retryOrder;window.reviewRechargeRequest=reviewRechargeRequest;
-    document.getElementById("refresh").onclick=refreshAll;document.getElementById("refreshUsers").onclick=refreshAll;document.getElementById("refreshRechargeRequests").onclick=refreshAll;document.getElementById("reloadGateway").onclick=reloadGateway;
-    statusFilter.onchange=refreshAll;rechargeStatusFilter.onchange=refreshAll;deviceCodeInput.onchange=refreshAll;
-    document.getElementById("searchUsers").onclick=()=>searchUsers().catch((e)=>showBox(userResult,e.message));
-    document.getElementById("issueToken").onclick=()=>issueToken().catch((e)=>showBox(tokenResult,e.message));
-    document.getElementById("adjustBalance").onclick=()=>adjustBalance().catch((e)=>showBox(tokenResult,e.message));
-    document.getElementById("resetPassword").onclick=()=>resetPassword().catch((e)=>showBox(tokenResult,e.message));
-    refreshAll();setInterval(refreshAll,5000);
+    loginButton.onclick=()=>loginAdmin().catch((e)=>setAuthState(false,`登录失败：${e.message}`));
+    logoutButton.onclick=()=>logoutAdmin().catch((e)=>setAuthState(false,`退出失败：${e.message}`));
+    document.getElementById("refresh").onclick=refreshAll;
+    document.getElementById("refreshRechargeRequests").onclick=refreshAll;
+    document.getElementById("reloadGateway").onclick=reloadGateway;
+    statusFilter.onchange=refreshAll;rechargeStatusFilter.onchange=()=>{syncRechargeStatusTabs();refreshAll()};deviceCodeInput.onchange=refreshAll;
+    syncRechargeStatusTabs();bootstrapAdmin();setInterval(()=>{if(adminReady)refreshAll()},30000);
   </script>
 </body>
 </html>

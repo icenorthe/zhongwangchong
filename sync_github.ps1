@@ -3,10 +3,76 @@ param(
   [string]$RepoUrl,
 
   [Parameter(Mandatory = $false)]
-  [string]$Branch
+  [string]$Branch,
+
+  [Parameter(Mandatory = $false)]
+  [switch]$UploadPythonAnywhere,
+
+  [Parameter(Mandatory = $false)]
+  [string]$PyawUser,
+
+  [Parameter(Mandatory = $false)]
+  [string]$PyawHost,
+
+  [Parameter(Mandatory = $false)]
+  [string]$PyawTargetDir,
+
+  [Parameter(Mandatory = $false)]
+  [string[]]$PyawFiles
 )
 
 $ErrorActionPreference = "Stop"
+
+function Refresh-ProcessPath {
+  $machinePath = [Environment]::GetEnvironmentVariable("Path", "Machine")
+  $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
+  $parts = @($machinePath, $userPath) | Where-Object { $_ -and $_.Trim() -ne "" }
+  if ($parts.Count -gt 0) {
+    $env:Path = ($parts -join ";")
+  }
+}
+
+function Add-PathIfExists {
+  param([string]$PathEntry)
+
+  if (-not $PathEntry -or -not (Test-Path -LiteralPath $PathEntry)) {
+    return
+  }
+
+  $current = @($env:Path -split ';') | Where-Object { $_ -and $_.Trim() -ne "" }
+  if ($current -contains $PathEntry) {
+    return
+  }
+
+  $env:Path = "$PathEntry;$env:Path"
+}
+
+function Ensure-CommandAvailable {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$CommandName,
+
+    [Parameter(Mandatory = $true)]
+    [string[]]$CandidatePaths
+  )
+
+  if (Get-Command $CommandName -ErrorAction SilentlyContinue) {
+    return
+  }
+
+  Refresh-ProcessPath
+  if (Get-Command $CommandName -ErrorAction SilentlyContinue) {
+    return
+  }
+
+  foreach ($candidate in $CandidatePaths) {
+    Add-PathIfExists $candidate
+  }
+
+  if (-not (Get-Command $CommandName -ErrorAction SilentlyContinue)) {
+    throw "$CommandName is not installed or not in PATH. Please install it first."
+  }
+}
 
 function Test-GitHubConnectivity {
   param(
@@ -51,9 +117,12 @@ function Invoke-Git {
   if ($LASTEXITCODE -ne 0) { throw "git failed: $pretty" }
 }
 
-if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
-  throw "git is not installed or not in PATH. Please install Git first."
-}
+Ensure-CommandAvailable -CommandName "git" -CandidatePaths @(
+  "C:\Program Files\Git\cmd",
+  "C:\Program Files\Git\bin",
+  "$env:LocalAppData\Programs\Git\cmd",
+  "$env:LocalAppData\Programs\Git\bin"
+)
 
 if (-not (Test-Path -LiteralPath ".git")) {
   throw "Not a Git repo (missing .git). Run this from the project root."
@@ -142,3 +211,30 @@ try {
   throw
 }
 Write-Host "Done."
+
+if ($UploadPythonAnywhere) {
+  $PyawUser = if ($PyawUser) { $PyawUser } else { $env:PYAW_USER }
+  $PyawHost = if ($PyawHost) { $PyawHost } else { $env:PYAW_HOST }
+  if (-not $PyawHost -or $PyawHost.Trim() -eq "") { $PyawHost = "ssh.pythonanywhere.com" }
+  if (-not $PyawUser -or $PyawUser.Trim() -eq "") { throw "Missing PythonAnywhere username. Set -PyawUser or env PYAW_USER." }
+  $PyawTargetDir = if ($PyawTargetDir) { $PyawTargetDir } else { $env:PYAW_TARGET_DIR }
+  if (-not $PyawTargetDir -or $PyawTargetDir.Trim() -eq "") {
+    $PyawTargetDir = "/home/$PyawUser/zhongwang-charge/assets/web"
+  }
+  if (-not $PyawFiles -or $PyawFiles.Count -eq 0) {
+    $PyawFiles = @("assets/web/wechat_group_qr.png","assets/web/wechat_qr.png")
+  }
+  if (-not (Get-Command scp -ErrorAction SilentlyContinue)) {
+    throw "scp is not available in PATH. Install OpenSSH client or use another upload method."
+  }
+  foreach ($file in $PyawFiles) {
+    if (-not (Test-Path -LiteralPath $file)) {
+      Write-Host "Skip missing file: $file"
+      continue
+    }
+    Write-Host ">> scp $file $PyawUser@${PyawHost}:$PyawTargetDir/"
+    & scp "$file" "$PyawUser@$PyawHost`:$PyawTargetDir/"
+    if ($LASTEXITCODE -ne 0) { throw "scp failed for $file" }
+  }
+  Write-Host "PythonAnywhere assets upload done."
+}

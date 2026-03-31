@@ -25,7 +25,7 @@ STATION_PLACEHOLDERS_PATH = CONFIG_DIR / "station_placeholders.json"
 REALTIME_PARSECK_URL = "https://wx.jwnzn.com/mini_jwnzn/miniapp/mp_parseCk.action"
 REALTIME_USING_ORDERS_URL = "https://wx.jwnzn.com/mini_jwnzn/miniapp/mp_pileUsingOrders.action"
 REALTIME_STATUS_TIMEOUT_SECONDS = max(2.0, float(os.getenv("REALTIME_STATUS_TIMEOUT_SECONDS", "10")))
-REALTIME_STATUS_MAX_WORKERS = max(1, int(os.getenv("REALTIME_STATUS_MAX_WORKERS", "4")))
+REALTIME_STATUS_MAX_WORKERS = max(1, int(os.getenv("REALTIME_STATUS_MAX_WORKERS", "2")))
 REALTIME_API_HEADERS = {
     "Content-Type": "application/x-www-form-urlencoded",
     "User-Agent": (
@@ -36,17 +36,19 @@ REALTIME_API_HEADERS = {
     ),
     "Authorization": "",
 }
-REALTIME_STATION_CACHE_SECONDS = max(30, int(os.getenv("REALTIME_STATION_CACHE_SECONDS", "180")))
-REALTIME_STATUS_SERIAL_RETRY_LIMIT = max(0, int(os.getenv("REALTIME_STATUS_SERIAL_RETRY_LIMIT", "12")))
+REALTIME_STATION_CACHE_SECONDS = max(30, int(os.getenv("REALTIME_STATION_CACHE_SECONDS", "300")))
+REALTIME_STATUS_SERIAL_RETRY_LIMIT = max(0, int(os.getenv("REALTIME_STATUS_SERIAL_RETRY_LIMIT", "2")))
 REALTIME_STATUS_SERIAL_RETRY_SECONDS = max(
-    0.0, float(os.getenv("REALTIME_STATUS_SERIAL_RETRY_SECONDS", "0.35"))
+    0.0, float(os.getenv("REALTIME_STATUS_SERIAL_RETRY_SECONDS", "1.0"))
 )
 REGION_SORT_ORDER = {
     "综合楼": 1,
+    "综合楼/图书馆": 1,
     "学术交流中心": 2,
     "东盟一号": 3,
     "19栋": 4,
     "19栋女生宿舍": 4,
+    "19栋宿舍": 4,
 }
 HIDDEN_STATION_NUMBERS = {3, 46, 70}
 _station_realtime_cache: dict[str, dict[str, Any]] = {}
@@ -61,8 +63,82 @@ def optional_int(value: Any) -> int | None:
         return None
 
 
+def parse_numeric(value: Any) -> int | None:
+    if value in (None, ""):
+        return None
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return None
+    text = str(value).strip()
+    if not text or not text.isdigit():
+        return None
+    try:
+        return int(text)
+    except (TypeError, ValueError):
+        return None
+
+
+def parse_seconds(value: Any) -> int | None:
+    raw = parse_numeric(value)
+    if raw is None or raw <= 0:
+        return None
+    return raw
+
+
+def parse_millis_as_seconds(value: Any) -> int | None:
+    raw = parse_numeric(value)
+    if raw is None or raw <= 0:
+        return None
+    return max(1, (raw + 999) // 1000)
+
+
 def optional_text(value: Any) -> str:
     return str(value or "").strip()
+
+
+def pick_end_time(item: dict[str, Any]) -> str:
+    raw = (
+        item.get("endTime")
+        or item.get("finishTime")
+        or item.get("stopTime")
+        or item.get("end_time")
+        or item.get("finish_time")
+        or item.get("stop_time")
+    )
+    text = optional_text(raw)
+    if not text:
+        return ""
+    if parse_numeric(text) is not None:
+        return ""
+    return text
+
+
+def pick_remain_seconds(item: dict[str, Any]) -> int | None:
+    remain = parse_seconds(
+        item.get("remainSeconds")
+        or item.get("leftSeconds")
+        or item.get("remainingSeconds")
+        or item.get("surplusSeconds")
+        or item.get("countdown")
+        or item.get("remain_seconds")
+        or item.get("left_seconds")
+        or item.get("remaining_seconds")
+    )
+    if remain is not None and remain > 0:
+        return remain
+    end_time_raw = (
+        item.get("endTime")
+        or item.get("finishTime")
+        or item.get("stopTime")
+        or item.get("end_time")
+        or item.get("finish_time")
+        or item.get("stop_time")
+    )
+    return parse_millis_as_seconds(end_time_raw)
 
 
 def station_number_from_name(name: str) -> int:
@@ -244,7 +320,20 @@ def load_charge_api_config() -> dict[str, Any]:
 
 
 def configured_member_id() -> str:
-    return optional_text(load_charge_api_config().get("member_id"))
+    """状态查询专用：优先使用只读ID（member_id_status），没有则回退使用充电ID"""
+    data = load_charge_api_config()
+    
+    # 优先使用专门的状态查询ID（推荐用于插座状态）
+    status_id = optional_text(data.get("member_id_status"))
+    if status_id:
+        return status_id
+    
+    # 回退到充电ID
+    charge_id = optional_text(data.get("member_id"))
+    if charge_id:
+        return charge_id
+    
+    return ""
 
 
 def post_form_json(url: str, payload: dict[str, Any], timeout: float = REALTIME_STATUS_TIMEOUT_SECONDS) -> dict[str, Any]:
@@ -310,9 +399,14 @@ def fetch_using_orders(member_id: str) -> tuple[dict[tuple[str, int], dict[str, 
             if not device_code or socket_no is None or socket_no <= 0:
                 continue
             start_time = optional_text(item.get("startTime"))
+            end_time = pick_end_time(item)
+            remain_seconds = pick_remain_seconds(item)
             using_orders[(device_code, socket_no)] = {
                 "status": "充电中",
                 "detail": f"开始时间：{start_time}" if start_time else "",
+                "start_time": start_time,
+                "end_time": end_time,
+                "remain_seconds": remain_seconds,
             }
     return using_orders, optional_text(payload.get("msg"))
 
@@ -418,17 +512,66 @@ def compute_live_socket_state_snapshot() -> list[dict[str, Any]]:
             product = product_map.get(socket_no)
             if station_result.get("ok") and product is not None:
                 state = optional_int(product.get("state"))
-                sockets.append(
-                    {
+                if state == 1:
+                    snapshot = using_orders.get((str(station.get("device_code", "")), socket_no))
+                    if snapshot is not None:
+                        socket_data = {
+                            "socket_no": socket_no,
+                            "status": "充电中",
+                            "detail": optional_text(snapshot.get("detail")),
+                        }
+                        for key in ("start_time", "end_time", "remain_seconds"):
+                            if snapshot.get(key) not in (None, ""):
+                                socket_data[key] = snapshot.get(key)
+                        sockets.append(socket_data)
+                        continue
+                    end_time = pick_end_time(product)
+                    remain_seconds = pick_remain_seconds(product)
+                    socket_data = {
                         "socket_no": socket_no,
-                        "status": "空闲" if state == 0 else "充电中" if state == 1 else "未查询到",
+                        "status": "充电中",
                         "detail": "",
                     }
-                )
+                    if end_time:
+                        socket_data["end_time"] = end_time
+                    if remain_seconds is not None and remain_seconds > 0:
+                        socket_data["remain_seconds"] = remain_seconds
+                    sockets.append(socket_data)
+                    continue
+                socket_data = {
+                    "socket_no": socket_no,
+                    "status": "空闲" if state == 0 else "充电中" if state == 1 else "未查询到",
+                    "detail": "",
+                }
+                if state == 0:
+                    snapshot = using_orders.get((str(station.get("device_code", "")), socket_no))
+                    if snapshot is not None:
+                        for key in ("start_time", "end_time", "remain_seconds"):
+                            if snapshot.get(key) not in (None, ""):
+                                socket_data[key] = snapshot.get(key)
+                    end_time = pick_end_time(product)
+                    remain_seconds = pick_remain_seconds(product)
+                    if "end_time" not in socket_data and end_time:
+                        socket_data["end_time"] = end_time
+                    if (
+                        "remain_seconds" not in socket_data
+                        and remain_seconds is not None
+                        and remain_seconds > 0
+                    ):
+                        socket_data["remain_seconds"] = remain_seconds
+                sockets.append(socket_data)
                 continue
             snapshot = using_orders.get((str(station.get("device_code", "")), socket_no))
             if snapshot is not None:
-                sockets.append({"socket_no": socket_no, "status": "充电中", "detail": optional_text(snapshot.get("detail"))})
+                socket_data = {
+                    "socket_no": socket_no,
+                    "status": "充电中",
+                    "detail": optional_text(snapshot.get("detail")),
+                }
+                for key in ("start_time", "end_time", "remain_seconds"):
+                    if snapshot.get(key) not in (None, ""):
+                        socket_data[key] = snapshot.get(key)
+                sockets.append(socket_data)
             else:
                 sockets.append({"socket_no": socket_no, "status": "未查询到", "detail": ""})
 

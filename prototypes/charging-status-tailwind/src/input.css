@@ -1,0 +1,42 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-feature-settings: "tnum" 1;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply rounded-4xl border border-white/70 bg-white/72 shadow-glass backdrop-blur-2xl;
+  }
+
+  .glass-surface {
+    @apply rounded-3xl border border-slate-200/70 bg-white/90 shadow-card;
+  }
+
+  .pressable {
+    @apply transition duration-200 ease-out hover:scale-95 active:scale-95;
+  }
+}
+
+@layer utilities {
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .safe-pb {
+    padding-bottom: calc(env(safe-area-inset-bottom) + 1.5rem);
+  }
+}

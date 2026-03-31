@@ -223,6 +223,22 @@
       meta.textContent = `网关模式：${stats.gateway_mode || "-"} | 最新刷新：${new Date().toLocaleString()}`;
     }
 
+    function stationNoFromName(name) {
+      const match = String(name || "").match(/(\\d+)号站/);
+      return match ? Number(match[1]) : 0;
+    }
+
+    function slotCode(order) {
+      const stationNo = stationNoFromName(order.station_name);
+      const socket = Number(order.socket_no || 0);
+      const device = String(order.device_code || "").trim();
+      if (stationNo && socket) return `${stationNo}-${socket}`;
+      if (stationNo) return String(stationNo);
+      if (device && socket) return `${device}-${socket}`;
+      if (socket) return `${socket}号`;
+      return "-";
+    }
+
     function renderOrders(orders) {
       if (!orders.length) {
         tbody.innerHTML = `<tr><td colspan="10" class="muted">暂无订单</td></tr>`;
@@ -237,7 +253,7 @@
             <td>${o.id}</td>
             <td>${o.station_name || "-"}</td>
             <td>${o.device_code}</td>
-            <td>${o.socket_no} 号</td>
+            <td>${slotCode(o)}</td>
             <td>¥${Number(o.amount_yuan).toFixed(2)}</td>
             <td><span class="status ${o.status}">${o.status}</span></td>
             <td>${o.result_message || "-"}</td>

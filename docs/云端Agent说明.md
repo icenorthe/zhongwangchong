@@ -35,8 +35,9 @@ python ??\cloud_agent.py --once
 2. 订单状态保持为 `PENDING`。
 3. `services/cloud_agent.py` 定时上报心跳，让网站知道“接单电脑是否在线”。
 4. `services/cloud_agent.py` 抢占一条待处理订单。
-5. Agent 调用 `services/local_charge_runner.py` 执行本地微信自动化。
-6. Agent 把结果回写成 `SUCCESS` 或 `FAILED`。
+5. Agent 优先调用本地桥接服务 `services/local_bridge_api.py`。
+6. 本地桥接服务再调用 `services/local_charge_runner.py` 执行本地自动化。
+7. Agent 把结果回写成 `SUCCESS` 或 `FAILED`。
 
 ## 配置位置
 
@@ -47,6 +48,8 @@ python ??\cloud_agent.py --once
 - `agent_token`：本地 Agent 使用的令牌
 - `poll_seconds`：轮询间隔秒数
 - `runner_command`：本地执行器命令，默认是 `python ??\local_charge_runner.py`
+- `local_bridge_url`：本地桥接服务地址，配置后优先走桥接模式
+- `local_bridge_token`：调用本地桥接服务时使用的令牌；不填时会回退读取 `LOCAL_BRIDGE_TOKEN` 或 `config/gateway_config.json` 里的本地 token
 - `runner_timeout_seconds`：单次执行超时时间
 
 ## 心跳和在线状态

@@ -9,5 +9,5 @@
  "success_expected": true,
  "message_field": "message",
  "order_id_field": "order_id",
- "timeout_seconds": 30
+ "timeout_seconds": 120
 }

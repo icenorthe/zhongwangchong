@@ -19,6 +19,18 @@ call :kill_by_port %BRIDGE_PORT%
 echo [INFO] Stop tunnel process %TUNNEL_PROCESS_NAME%...
 taskkill /IM "%TUNNEL_PROCESS_NAME%" /F >nul 2>&1
 
+echo [INFO] Stop cloud agent...
+for /f "tokens=2 delims==" %%a in ('wmic process where "CommandLine like '%%cloud_agent.py%%'" get ProcessId /value ^| findstr "="') do (
+  echo     kill PID=%%a
+  taskkill /PID %%a /F >nul 2>&1
+)
+
+echo [INFO] Stop socket status agent...
+for /f "tokens=2 delims==" %%a in ('wmic process where "CommandLine like '%%socket_status_agent.py%%'" get ProcessId /value ^| findstr "="') do (
+  echo     kill PID=%%a
+  taskkill /PID %%a /F >nul 2>&1
+)
+
 echo [OK] Stop done.
 endlocal
 exit /b 0

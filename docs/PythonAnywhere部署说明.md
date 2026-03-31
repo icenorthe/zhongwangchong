@@ -98,6 +98,9 @@ from services.pythonanywhere_app import app
 - `admin_token` 用于后台接口鉴权
 - `admin_password` 是后台页面的第二道密码，不填则不启用
 
+后台页现在直接打开 `/admin`、`/admin/orders` 或 `/admin/users` 即可。
+管理员口令和后台密码在页面内输入，前端会通过请求头传递，不再拼到 URL 里。
+
 ## 8）验证部署结果
 
 打开：
@@ -128,6 +131,12 @@ from services.pythonanywhere_app import app
 1. PythonAnywhere 只负责网站、登录、订单和余额。
 2. Cloudflare Worker 负责 XPay 下单、签名、回调。
 3. `payment_mode` 使用 `balance`，不要再用旧的 `token` 模式做在线收款。
+
+当前实际状态：
+
+1. 线上还没有接通任何自动支付回调。
+2. 现在使用的是“二维码收款 + 人工审核充值”。
+3. 原来的 PHP 支付示例已经归档到 `archive/payment_php_examples/`，不要再作为生产方案部署。
 
 如果你暂时没有 XPay 商户，也可以把微信收款码放到 `assets/web/wechat_qr.png`，同步到 PythonAnywhere 后先用线下确认到账的方式过渡。
 

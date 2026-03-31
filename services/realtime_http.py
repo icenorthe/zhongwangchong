@@ -12,17 +12,22 @@ import urllib.request
 from typing import Any
 
 
-REALTIME_RETRY_COUNT = max(1, int(os.getenv("REALTIME_STATUS_RETRY_COUNT", "3")))
+REALTIME_RETRY_COUNT = max(1, int(os.getenv("REALTIME_STATUS_RETRY_COUNT", "2")))
 REALTIME_RETRY_BACKOFF_SECONDS = max(
-    0.05, float(os.getenv("REALTIME_STATUS_RETRY_BACKOFF_SECONDS", "0.25"))
+    0.05, float(os.getenv("REALTIME_STATUS_RETRY_BACKOFF_SECONDS", "0.6"))
 )
 REALTIME_RETRY_JITTER_SECONDS = max(
-    0.0, float(os.getenv("REALTIME_STATUS_RETRY_JITTER_SECONDS", "0.12"))
+    0.0, float(os.getenv("REALTIME_STATUS_RETRY_JITTER_SECONDS", "0.2"))
 )
 REALTIME_FORCE_TLS12 = os.getenv("REALTIME_STATUS_FORCE_TLS12", "1").lower() not in {
     "0",
     "false",
     "no",
+}
+REALTIME_USE_SYSTEM_PROXY = os.getenv("REALTIME_STATUS_USE_SYSTEM_PROXY", "0").lower() in {
+    "1",
+    "true",
+    "yes",
 }
 
 
@@ -46,6 +51,17 @@ def build_realtime_ssl_context() -> ssl.SSLContext:
 
 
 REALTIME_SSL_CONTEXT = build_realtime_ssl_context()
+
+
+def build_realtime_opener() -> urllib.request.OpenerDirector:
+    handlers: list[urllib.request.BaseHandler] = []
+    if not REALTIME_USE_SYSTEM_PROXY:
+        handlers.append(urllib.request.ProxyHandler({}))
+    handlers.append(urllib.request.HTTPSHandler(context=REALTIME_SSL_CONTEXT))
+    return urllib.request.build_opener(*handlers)
+
+
+REALTIME_OPENER = build_realtime_opener()
 
 
 def unwrap_error_reason(err: BaseException) -> BaseException:
@@ -92,7 +108,8 @@ def post_form_json(
     retry_count: int = REALTIME_RETRY_COUNT,
     backoff_seconds: float = REALTIME_RETRY_BACKOFF_SECONDS,
     jitter_seconds: float = REALTIME_RETRY_JITTER_SECONDS,
-) -> dict[str, Any]:
+    return_headers: bool = False,          # ← 新增参数
+) -> dict[str, Any] | tuple[dict[str, Any], dict[str, str]]:
     body = urllib.parse.urlencode(
         {key: str(value) for key, value in payload.items() if value not in (None, "")}
     ).encode("utf-8")
@@ -103,13 +120,16 @@ def post_form_json(
     for attempt in range(1, retry_count + 1):
         request = urllib.request.Request(url, data=body, method="POST", headers=request_headers)
         try:
-            with urllib.request.urlopen(
-                request,
-                timeout=timeout,
-                context=REALTIME_SSL_CONTEXT,
-            ) as response:
+            with REALTIME_OPENER.open(request, timeout=timeout) as response:
                 raw_bytes = response.read()
-            return json.loads(decode_remote_text(raw_bytes))
+                data = json.loads(decode_remote_text(raw_bytes))
+                
+                if return_headers:
+                    # 返回所有响应头（便于提取 Set-Cookie）
+                    resp_headers = {k.lower(): v for k, v in response.getheaders()}
+                    return data, resp_headers
+                
+                return data
         except urllib.error.HTTPError as err:
             raw_bytes = err.read()
             detail = decode_remote_text(raw_bytes).strip()
@@ -120,5 +140,7 @@ def post_form_json(
                 raise RuntimeError(format_error_message(err)) from err
         if attempt < retry_count:
             time.sleep(backoff_seconds * attempt + random.uniform(0.0, jitter_seconds))
+
+    raise RuntimeError("实时接口请求失败")
 
     raise RuntimeError("实时接口请求失败")

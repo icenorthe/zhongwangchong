@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Charging Status App Prototype</title>
+  <script>
+    tailwind = {
+      config: {
+        theme: {
+          extend: {
+            colors: {
+              shell: "#F9FAFB",
+              energy: "#22C55E",
+              ink: "#0F172A",
+              mist: "#E2E8F0",
+              glow: "#DCFCE7",
+            },
+            fontFamily: {
+              sans: [
+                '"SF Pro Display"',
+                '"SF Pro Text"',
+                "ui-sans-serif",
+                "system-ui",
+                "-apple-system",
+                "BlinkMacSystemFont",
+                '"PingFang SC"',
+                '"Noto Sans SC"',
+                "sans-serif"
+              ]
+            },
+            borderRadius: {
+              "4xl": "2rem",
+              "5xl": "2.5rem",
+            },
+            boxShadow: {
+              glass: "0 24px 80px rgba(15, 23, 42, 0.10)",
+              card: "0 18px 48px rgba(15, 23, 42, 0.08)",
+              soft: "0 10px 28px rgba(15, 23, 42, 0.05)",
+            },
+            keyframes: {
+              "breathe-glow": {
+                "0%, 100%": {
+                  opacity: "0.58",
+                  transform: "scale(0.9)",
+                  boxShadow: "0 0 0 rgba(34, 197, 94, 0)",
+                },
+                "50%": {
+                  opacity: "1",
+                  transform: "scale(1)",
+                  boxShadow: "0 0 18px rgba(34, 197, 94, 0.42)",
+                },
+              },
+              float: {
+                "0%, 100%": { transform: "translateY(0px)" },
+                "50%": { transform: "translateY(-6px)" },
+              },
+            },
+            animation: {
+              "breathe-glow": "breathe-glow 2.6s ease-in-out infinite",
+              float: "float 6s ease-in-out infinite",
+            },
+          },
+        },
+      },
+    };
+  </script>
+  <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+  <style type="text/tailwindcss">
+    @layer base {
+      body {
+        @apply bg-shell font-sans text-ink antialiased;
+      }
+    }
+
+    @layer components {
+      .glass-card {
+        @apply rounded-4xl border border-white/70 bg-white/72 shadow-glass backdrop-blur-2xl;
+      }
+
+      .glass-surface {
+        @apply rounded-3xl border border-slate-200/70 bg-white/90 shadow-card;
+      }
+
+      .pressable {
+        @apply transition duration-200 ease-out hover:scale-95 active:scale-95;
+      }
+    }
+
+    @layer utilities {
+      .hide-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+
+      .hide-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="relative isolate overflow-hidden">
+    <div class="pointer-events-none absolute inset-x-0 top-0 h-80 bg-[radial-gradient(circle_at_top,_rgba(34,197,94,0.14),_transparent_58%)]"></div>
+    <div class="pointer-events-none absolute right-0 top-12 h-80 w-80 rounded-full bg-[radial-gradient(circle,_rgba(59,130,246,0.12),_transparent_64%)] blur-3xl"></div>
+    <div class="pointer-events-none absolute left-0 top-96 h-80 w-80 rounded-full bg-[radial-gradient(circle,_rgba(15,23,42,0.05),_transparent_70%)] blur-3xl"></div>
+
+    <main class="mx-auto max-w-md px-4 pb-20 pt-6 sm:max-w-6xl sm:px-6 lg:px-8">
+      <section class="glass-card relative overflow-hidden p-5 sm:p-7">
+        <div class="pointer-events-none absolute right-0 top-0 h-40 w-40 rounded-full bg-[radial-gradient(circle,_rgba(34,197,94,0.16),_transparent_68%)]"></div>
+        <div class="relative z-10 flex items-start justify-between gap-4">
+          <div class="max-w-xl">
+            <div class="inline-flex items-center gap-2 rounded-full bg-ink/5 px-3 py-1 text-xs font-semibold tracking-[0.2em] text-ink/70">
+              CAMPUS ENERGY
+            </div>
+            <h1 class="mt-4 text-3xl font-semibold tracking-tight text-ink sm:text-5xl">
+              充电状态总览
+            </h1>
+            <p class="mt-3 max-w-lg text-sm leading-7 text-slate-600 sm:text-base">
+              用更轻盈的方式查看校园充电桩状态。空闲占比、实时倒计时和重点站点都集中在一个页面里，打开就能快速判断去哪里充。
+            </p>
+          </div>
+          <div class="hidden rounded-3xl border border-white/80 bg-white/80 px-4 py-3 text-right shadow-soft backdrop-blur-xl sm:block">
+            <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">实时同步</p>
+            <p class="mt-1 text-sm font-semibold text-ink">18:17 更新</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <button class="pressable glass-surface p-4 text-left">
+          <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-ink via-slate-800 to-energy text-lg text-white shadow-soft">
+            🏫
+          </div>
+          <h2 class="mt-4 text-sm font-semibold text-ink">综合楼状态</h2>
+          <p class="mt-1 text-xs leading-5 text-slate-500">查看空闲桩和剩余时间</p>
+        </button>
+        <button class="pressable glass-surface p-4 text-left">
+          <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-900 to-sky-500 text-lg text-white shadow-soft">
+            🎓
+          </div>
+          <h2 class="mt-4 text-sm font-semibold text-ink">学术中心</h2>
+          <p class="mt-1 text-xs leading-5 text-slate-500">快速进入常用区域</p>
+        </button>
+        <button class="pressable glass-surface p-4 text-left">
+          <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-900 to-violet-500 text-lg text-white shadow-soft">
+            ⚡
+          </div>
+          <h2 class="mt-4 text-sm font-semibold text-ink">实时倒计时</h2>
+          <p class="mt-1 text-xs leading-5 text-slate-500">优先查看快结束的枪位</p>
+        </button>
+        <button class="pressable glass-surface p-4 text-left">
+          <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-energy to-lime-300 text-lg text-white shadow-soft">
+            🔐
+          </div>
+          <h2 class="mt-4 text-sm font-semibold text-ink">登录详情</h2>
+          <p class="mt-1 text-xs leading-5 text-slate-500">登录后查看完整站点数据</p>
+        </button>
+      </section>
+
+      <section class="mt-5 grid gap-4 sm:grid-cols-2">
+        <article class="glass-card p-5 sm:p-6">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">空闲占比</p>
+              <h3 class="mt-2 text-lg font-semibold text-ink">现在有位，适合出发</h3>
+              <p class="mt-2 text-sm leading-6 text-slate-500">使用环形进度快速判断当前最适合去的区域。</p>
+            </div>
+            <div class="animate-float">
+              <svg class="h-24 w-24 -rotate-90" viewBox="0 0 120 120" aria-hidden="true">
+                <circle cx="60" cy="60" r="44" fill="none" stroke="#E5E7EB" stroke-width="12"></circle>
+                <circle data-ring-fill data-progress="62" cx="60" cy="60" r="44" fill="none" stroke="#22C55E" stroke-linecap="round" stroke-width="12"></circle>
+              </svg>
+            </div>
+          </div>
+          <div class="mt-4 flex items-end justify-between">
+            <div>
+              <div class="text-4xl font-semibold tracking-tight text-ink">62%</div>
+              <div class="mt-1 text-sm text-slate-500">共 96 枪，空闲 59 枪</div>
+            </div>
+            <span class="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+              <span class="h-2.5 w-2.5 rounded-full bg-energy animate-breathe-glow"></span>
+              空闲
+            </span>
+          </div>
+        </article>
+
+        <article class="glass-card p-5 sm:p-6">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">使用中占比</p>
+              <h3 class="mt-2 text-lg font-semibold text-ink">高峰时段也能一眼判断</h3>
+              <p class="mt-2 text-sm leading-6 text-slate-500">忙碌区域会更快消耗空位，倒计时列表能帮你提前卡位。</p>
+            </div>
+            <div class="animate-float [animation-delay:-1.6s]">
+              <svg class="h-24 w-24 -rotate-90" viewBox="0 0 120 120" aria-hidden="true">
+                <circle cx="60" cy="60" r="44" fill="none" stroke="#E5E7EB" stroke-width="12"></circle>
+                <circle data-ring-fill data-progress="38" cx="60" cy="60" r="44" fill="none" stroke="#0F172A" stroke-linecap="round" stroke-width="12"></circle>
+              </svg>
+            </div>
+          </div>
+          <div class="mt-4 flex items-end justify-between">
+            <div>
+              <div class="text-4xl font-semibold tracking-tight text-ink">38%</div>
+              <div class="mt-1 text-sm text-slate-500">使用中 37 枪，流动较快</div>
+            </div>
+            <span class="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
+              <span class="h-2.5 w-2.5 rounded-full bg-slate-500"></span>
+              使用中
+            </span>
+          </div>
+        </article>
+      </section>
+
+      <section class="mt-5 glass-card p-5 sm:p-6">
+        <div class="flex items-center justify-between gap-3">
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">站点列表</p>
+            <h2 class="mt-2 text-xl font-semibold text-ink">常用区域状态</h2>
+          </div>
+          <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-500">实时查看</span>
+        </div>
+
+        <div class="mt-5 space-y-4">
+          <article class="glass-surface p-5">
+            <div class="flex items-start justify-between gap-4">
+              <div class="flex items-start gap-4">
+                <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-energy to-emerald-300 text-xl text-white shadow-soft">🏫</div>
+                <div>
+                  <h3 class="text-base font-semibold text-ink">综合楼一号区</h3>
+                  <p class="mt-1 text-sm text-slate-500">靠近北门，适合短停快速补电</p>
+                </div>
+              </div>
+              <span class="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                <span class="h-2.5 w-2.5 rounded-full bg-energy animate-breathe-glow"></span>
+                空闲 12
+              </span>
+            </div>
+            <div class="mt-4 flex flex-wrap gap-2 text-xs text-slate-500">
+              <span class="rounded-full bg-slate-100 px-3 py-1">总枪位 20</span>
+              <span class="rounded-full bg-slate-100 px-3 py-1">使用中 8</span>
+              <span class="rounded-full bg-slate-100 px-3 py-1">平均等待 9 分钟</span>
+            </div>
+          </article>
+
+          <article class="glass-surface p-5">
+            <div class="flex items-start justify-between gap-4">
+              <div class="flex items-start gap-4">
+                <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-900 to-sky-500 text-xl text-white shadow-soft">🎓</div>
+                <div>
+                  <h3 class="text-base font-semibold text-ink">学术中心二号区</h3>
+                  <p class="mt-1 text-sm text-slate-500">下课高峰较忙，适合提前看倒计时</p>
+                </div>
+              </div>
+              <span class="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
+                <span class="h-2.5 w-2.5 rounded-full bg-amber-400"></span>
+                使用中 14
+              </span>
+            </div>
+            <div class="mt-4 flex flex-wrap gap-2 text-xs text-slate-500">
+              <span class="rounded-full bg-slate-100 px-3 py-1">总枪位 24</span>
+              <span class="rounded-full bg-slate-100 px-3 py-1">空闲 10</span>
+              <span class="rounded-full bg-slate-100 px-3 py-1">预计 12 分钟有新空位</span>
+            </div>
+          </article>
+
+          <article class="glass-surface p-5">
+            <div class="flex items-start justify-between gap-4">
+              <div class="flex items-start gap-4">
+                <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-900 to-violet-500 text-xl text-white shadow-soft">🏠</div>
+                <div>
+                  <h3 class="text-base font-semibold text-ink">宿舍区三号区</h3>
+                  <p class="mt-1 text-sm text-slate-500">晚间回宿舍流量大，建议优先看这里</p>
+                </div>
+              </div>
+              <span class="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                <span class="h-2.5 w-2.5 rounded-full bg-energy animate-breathe-glow"></span>
+                空闲 9
+              </span>
+            </div>
+            <div class="mt-4 flex flex-wrap gap-2 text-xs text-slate-500">
+              <span class="rounded-full bg-slate-100 px-3 py-1">总枪位 18</span>
+              <span class="rounded-full bg-slate-100 px-3 py-1">使用中 9</span>
+              <span class="rounded-full bg-slate-100 px-3 py-1">夜间更新更频繁</span>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="mt-5 glass-card p-5 sm:p-6">
+        <div class="flex items-center justify-between gap-3">
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">实时列表</p>
+            <h2 class="mt-2 text-xl font-semibold text-ink">即将结束的枪位</h2>
+          </div>
+          <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-500">倒计时更新中</span>
+        </div>
+
+        <div class="mt-5 space-y-3">
+          <article class="rounded-[28px] bg-gradient-to-r from-energy/40 via-sky-400/30 to-indigo-400/30 p-[1px] shadow-soft">
+            <div class="rounded-[27px] bg-white/90 px-4 py-4 backdrop-blur-xl">
+              <div class="flex items-center justify-between gap-4">
+                <div>
+                  <p class="text-sm font-semibold text-ink">综合楼一号区 · 3 号枪</p>
+                  <p class="mt-1 text-xs text-slate-500">预计 18:30 结束，可优先前往</p>
+                </div>
+                <div class="rounded-2xl bg-ink px-3 py-2 text-white shadow-card">
+                  <p class="text-[10px] uppercase tracking-[0.18em] text-white/60">剩余</p>
+                  <p data-countdown data-seconds="540" class="text-lg font-semibold tabular-nums">09:00</p>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="rounded-[28px] bg-gradient-to-r from-emerald-300/35 via-cyan-300/30 to-blue-400/30 p-[1px] shadow-soft">
+            <div class="rounded-[27px] bg-white/90 px-4 py-4 backdrop-blur-xl">
+              <div class="flex items-center justify-between gap-4">
+                <div>
+                  <p class="text-sm font-semibold text-ink">学术中心二号区 · 8 号枪</p>
+                  <p class="mt-1 text-xs text-slate-500">预计 18:41 结束，适合提前卡位</p>
+                </div>
+                <div class="rounded-2xl bg-white px-3 py-2 text-right shadow-soft ring-1 ring-slate-200">
+                  <p class="text-[10px] uppercase tracking-[0.18em] text-slate-400">剩余</p>
+                  <p data-countdown data-seconds="1230" class="text-lg font-semibold text-ink tabular-nums">20:30</p>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="rounded-[28px] bg-gradient-to-r from-lime-300/35 via-emerald-300/30 to-sky-300/25 p-[1px] shadow-soft">
+            <div class="rounded-[27px] bg-white/90 px-4 py-4 backdrop-blur-xl">
+              <div class="flex items-center justify-between gap-4">
+                <div>
+                  <p class="text-sm font-semibold text-ink">宿舍区三号区 · 5 号枪</p>
+                  <p class="mt-1 text-xs text-slate-500">预计 18:52 结束，空位波动较快</p>
+                </div>
+                <div class="rounded-2xl bg-white px-3 py-2 text-right shadow-soft ring-1 ring-slate-200">
+                  <p class="text-[10px] uppercase tracking-[0.18em] text-slate-400">剩余</p>
+                  <p data-countdown data-seconds="1890" class="text-lg font-semibold text-ink tabular-nums">31:30</p>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="mt-6">
+        <button class="pressable w-full rounded-[30px] bg-[linear-gradient(135deg,#0F172A_0%,#14532D_45%,#22C55E_100%)] px-6 py-5 text-base font-semibold text-white shadow-[0_22px_44px_rgba(34,197,94,0.28)] sm:text-lg">
+          登录查看完整站点详情
+        </button>
+      </section>
+
+      <footer class="mt-8 pb-8">
+        <div class="glass-card p-5 sm:p-6">
+          <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">管理员联系</p>
+          <div class="mt-3 text-base font-semibold text-ink">微信：icenorth-charge</div>
+          <div class="mt-1 text-sm leading-7 text-slate-500">
+            如遇到站点状态不同步、支付问题或设备故障，请联系管理员处理。建议保留支付截图与枪位编号，方便快速协助。
+          </div>
+        </div>
+      </footer>
+    </main>
+  </div>
+
+  <script>
+    const RING_RADIUS = 44;
+    const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
+
+    document.querySelectorAll("[data-ring-fill]").forEach((node) => {
+      const progress = Number(node.dataset.progress || "0");
+      node.style.strokeDasharray = String(RING_CIRCUMFERENCE);
+      node.style.strokeDashoffset = String(
+        RING_CIRCUMFERENCE - (Math.max(0, Math.min(100, progress)) / 100) * RING_CIRCUMFERENCE
+      );
+    });
+
+    function formatCountdown(totalSeconds) {
+      const safe = Math.max(0, totalSeconds);
+      const minutes = String(Math.floor(safe / 60)).padStart(2, "0");
+      const seconds = String(safe % 60).padStart(2, "0");
+      return `${minutes}:${seconds}`;
+    }
+
+    function tickCountdowns() {
+      document.querySelectorAll("[data-countdown]").forEach((node) => {
+        const next = Math.max(0, Number(node.dataset.seconds || "0") - 1);
+        node.dataset.seconds = String(next);
+        node.textContent = formatCountdown(next);
+      });
+    }
+
+    document.querySelectorAll("[data-countdown]").forEach((node) => {
+      node.textContent = formatCountdown(Number(node.dataset.seconds || "0"));
+    });
+
+    setInterval(tickCountdowns, 1000);
+  </script>
+</body>
+</html>

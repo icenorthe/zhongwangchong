@@ -177,6 +177,24 @@ def reload_webapp(api_host: str, username: str, api_token: str, domain: str) -> 
         response.read()
 
 
+def wsgi_path_for_domain(username: str, domain: str) -> str:
+    safe_domain = domain.replace(".", "_")
+    return f"/var/www/{username}_{safe_domain}_wsgi.py"
+
+
+def build_wsgi_content(remote_project_path: str) -> bytes:
+    project_path = remote_project_path.rstrip("/")
+    content = (
+        "import sys\n"
+        "import os\n\n"
+        f'project_path = "{project_path}"\n'
+        "if project_path not in sys.path:\n"
+        "    sys.path.insert(0, project_path)\n\n"
+        "from pythonanywhere_app import app as application\n"
+    )
+    return content.encode("utf-8")
+
+
 def main() -> int:
     config = load_config()
     username = config["username"].strip()
@@ -185,6 +203,8 @@ def main() -> int:
     domain = config["domain"].strip()
     remote_project_path = config["remote_project_path"].rstrip("/")
     files = config["files"]
+    wsgi_path = config.get("wsgi_path", "").strip()
+    update_wsgi = str(config.get("update_wsgi", "1")).strip().lower() not in {"0", "false", "no"}
 
     if not username or not api_token or not domain or not remote_project_path:
         raise SystemExit("Config contains empty required fields.")
@@ -193,8 +213,21 @@ def main() -> int:
     print(f"Syncing to PythonAnywhere project: {remote_project_path}")
     for relative_path in files:
         local_file = PROJECT_ROOT / relative_path
+        content_override = generated_uploads.get(relative_path)
         if not local_file.exists():
-            raise SystemExit(f"Missing local file: {local_file}")
+            if content_override is None:
+                raise SystemExit(f"Missing local file: {local_file}")
+            remote_file = f"{remote_project_path}/{relative_path}"
+            print(f"Uploading {relative_path} -> {remote_file} (generated)")
+            upload_file(
+                api_host,
+                username,
+                api_token,
+                local_file,
+                remote_file,
+                content_override=content_override,
+            )
+            continue
         remote_file = f"{remote_project_path}/{relative_path}"
         print(f"Uploading {relative_path} -> {remote_file}")
         upload_file(
@@ -203,7 +236,19 @@ def main() -> int:
             api_token,
             local_file,
             remote_file,
-            content_override=generated_uploads.get(relative_path),
+            content_override=content_override,
+        )
+
+    if update_wsgi:
+        wsgi_target = wsgi_path or wsgi_path_for_domain(username, domain)
+        print(f"Updating WSGI config: {wsgi_target}")
+        upload_file(
+            api_host,
+            username,
+            api_token,
+            local_file=Path("wsgi.py"),
+            remote_file=wsgi_target,
+            content_override=build_wsgi_content(remote_project_path),
         )
 
     print(f"Reloading webapp: {domain}")

@@ -1,0 +1,1179 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>用户总览</title>
+  <style>
+    :root{
+      --bg:#f5f7fb;
+      --card:#ffffff;
+      --text:#0f172a;
+      --muted:#64748b;
+      --border:#e2e8f0;
+      --accent:#111827;
+      --accent-soft:#eef2ff;
+      --danger:#b91c1c;
+      --danger-soft:#fef2f2;
+      --shadow:0 16px 36px rgba(15,23,42,.08);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:"Microsoft YaHei","PingFang SC","Noto Sans SC",sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(circle at top left,#e0e7ff 0%,rgba(224,231,255,0) 42%),
+        radial-gradient(circle at top right,#fce7f3 0%,rgba(252,231,243,0) 36%),
+        linear-gradient(180deg,#f8fafc 0%,#eef2f7 100%);
+      padding:16px;
+    }
+    .page{max-width:1560px;margin:0 auto;display:grid;gap:14px}
+    .card{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:18px;
+      padding:18px;
+      box-shadow:var(--shadow);
+    }
+    .header-top,.section-head,.toolbar,.controls,.summary{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .header-top,.section-head{justify-content:space-between;align-items:flex-start}
+    .title h1{margin:0;font-size:26px}
+    .muted{color:var(--muted);font-size:13px;line-height:1.6}
+    .nav{display:flex;gap:8px;flex-wrap:wrap}
+    .nav a{
+      text-decoration:none;
+      color:var(--muted);
+      background:#f8fafc;
+      border:1px solid var(--border);
+      border-radius:999px;
+      padding:8px 14px;
+      font-size:13px;
+    }
+    .nav a.active{background:#fff;border-color:var(--accent);color:var(--accent)}
+    .auth{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+      gap:10px;
+      align-items:end;
+      margin-top:12px;
+    }
+    .layout{
+      display:grid;
+      grid-template-columns:minmax(0,1.78fr) minmax(260px,.58fr);
+      gap:12px;
+      align-items:start;
+    }
+    .field{display:grid;gap:6px;font-size:12px;color:var(--muted)}
+    input,textarea,button{
+      width:100%;
+      border:1px solid var(--border);
+      border-radius:12px;
+      padding:10px 12px;
+      font-size:14px;
+      background:#fff;
+      color:var(--text);
+    }
+    textarea{min-height:96px;resize:vertical}
+    input:focus,textarea:focus{
+      outline:none;
+      border-color:#94a3b8;
+      box-shadow:0 0 0 3px rgba(148,163,184,.16);
+    }
+    button{
+      cursor:pointer;
+      font-weight:700;
+      background:linear-gradient(180deg,#111827 0%,#0f172a 100%);
+      color:#fff;
+      border:none;
+      box-shadow:0 10px 24px rgba(15,23,42,.16);
+    }
+    button.secondary{
+      background:#fff;
+      color:var(--accent);
+      border:1px solid var(--border);
+      box-shadow:none;
+    }
+    button.ghost{
+      background:#f8fafc;
+      color:var(--accent);
+      border:1px solid var(--border);
+      box-shadow:none;
+    }
+    button.danger{
+      background:linear-gradient(180deg,#dc2626 0%,#b91c1c 100%);
+    }
+    button:hover{transform:translateY(-1px)}
+    button:disabled{cursor:not-allowed;opacity:.65;transform:none}
+    .toolbar{
+      justify-content:space-between;
+      margin-top:14px;
+      align-items:flex-end;
+    }
+    .toolbar-left,.toolbar-right{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .toolbar-left input{max-width:220px}
+    .checkbox{
+      display:inline-flex;
+      gap:8px;
+      align-items:center;
+      padding:10px 12px;
+      border:1px solid var(--border);
+      border-radius:12px;
+      background:#f8fafc;
+      color:var(--text);
+      font-size:13px;
+    }
+    .checkbox input{width:auto;padding:0}
+    .summary{margin-top:12px}
+    .pill{
+      display:inline-flex;
+      gap:6px;
+      align-items:center;
+      padding:8px 12px;
+      border-radius:999px;
+      background:var(--accent-soft);
+      border:1px solid #c7d2fe;
+      color:var(--muted);
+      font-size:13px;
+    }
+    .pill b{color:var(--accent)}
+    .table-wrap{overflow-x:auto;overflow-y:visible;margin-top:12px}
+    table{width:100%;border-collapse:collapse;min-width:0;table-layout:fixed}
+    th,td{
+      padding:8px 6px;
+      text-align:left;
+      border-bottom:1px solid var(--border);
+      font-size:13px;
+      vertical-align:top;
+      word-break:break-word;
+    }
+    th{
+      position:sticky;
+      top:0;
+      background:#f8fafc;
+      color:var(--muted);
+      font-size:11px;
+      z-index:1;
+    }
+    th:nth-child(1),td:nth-child(1){width:56px}
+    th:nth-child(2),td:nth-child(2){width:108px}
+    th:nth-child(3),td:nth-child(3){width:86px}
+    th:nth-child(4),td:nth-child(4){width:92px}
+    th:nth-child(5),td:nth-child(5){width:92px}
+    th:nth-child(6),td:nth-child(6){width:148px}
+    th:nth-child(7),td:nth-child(7){width:148px}
+    th:nth-child(8),td:nth-child(8){width:auto}
+    tbody tr{cursor:pointer;transition:background .12s ease}
+    tbody tr:hover{background:#f8fafc}
+    tbody tr.selected{background:#eef2ff}
+    .note-cell{
+      max-width:180px;
+      color:#334155;
+      white-space:pre-wrap;
+      word-break:break-word;
+    }
+    .panel{display:grid;gap:12px}
+    .panel-nav{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:10px;
+      margin-bottom:12px;
+    }
+    .panel-tab{
+      background:#fff;
+      color:var(--muted);
+      border:1px solid var(--border);
+      box-shadow:none;
+      text-align:left;
+    }
+    .panel-tab.active{
+      background:var(--accent-soft);
+      border-color:#c7d2fe;
+      color:var(--accent);
+    }
+    .panel-block{
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:14px;
+      background:#fff;
+      display:none;
+      gap:10px;
+    }
+    .panel-block.active{display:grid}
+    .panel-block h3{margin:0;font-size:16px}
+    .danger-block{border-color:#fecaca;background:var(--danger-soft)}
+    .result{
+      display:none;
+      margin-top:14px;
+      padding:12px 14px;
+      border-radius:14px;
+      border:1px solid var(--border);
+      background:#f8fafc;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.65;
+      white-space:pre-wrap;
+      word-break:break-word;
+    }
+    @media (max-width:1080px){
+      .layout{grid-template-columns:1fr}
+    }
+    @media (max-width:760px){
+      table{min-width:860px;table-layout:auto}
+      .panel-nav{grid-template-columns:1fr}
+    }
+    :root{
+      --font-sans:"HarmonyOS Sans SC","MiSans","PingFang SC","Microsoft YaHei",sans-serif;
+      --accent-blue:#1f436a;
+      --accent-blue-deep:#102038;
+      --accent-teal:#0f766e;
+      --line-soft:rgba(203,213,225,.72);
+      --surface-glass:rgba(255,255,255,.78);
+      --surface-solid:rgba(255,255,255,.94);
+      --shadow-card:0 24px 60px rgba(15,23,42,.10);
+    }
+    @keyframes adminSurfaceIn{
+      from{opacity:0;transform:translateY(12px);filter:blur(6px)}
+      to{opacity:1;transform:translateY(0);filter:blur(0)}
+    }
+    html{scroll-behavior:smooth}
+    body{
+      position:relative;
+      overflow-x:hidden;
+      font-family:var(--font-sans);
+      background:
+        radial-gradient(130% 120% at 0% 0%,rgba(191,219,254,.44) 0%,rgba(191,219,254,0) 36%),
+        radial-gradient(120% 110% at 100% 0%,rgba(250,204,21,.20) 0%,rgba(250,204,21,0) 32%),
+        radial-gradient(90% 110% at 20% 100%,rgba(20,184,166,.14) 0%,rgba(20,184,166,0) 42%),
+        linear-gradient(180deg,#eff3f8 0%,#f6f8fb 100%);
+    }
+    body::before,
+    body::after{
+      content:"";
+      position:fixed;
+      border-radius:50%;
+      pointer-events:none;
+      z-index:0;
+      filter:blur(8px);
+    }
+    body::before{
+      right:-120px;
+      top:-120px;
+      width:320px;
+      height:320px;
+      background:radial-gradient(circle,rgba(59,130,246,.15) 0%,rgba(59,130,246,0) 72%);
+    }
+    body::after{
+      left:-150px;
+      bottom:-170px;
+      width:360px;
+      height:360px;
+      background:radial-gradient(circle,rgba(13,148,136,.12) 0%,rgba(13,148,136,0) 72%);
+    }
+    .page{
+      position:relative;
+      z-index:1;
+      gap:16px;
+    }
+    .card{
+      position:relative;
+      overflow:hidden;
+      padding:22px;
+      border-radius:24px;
+      border:1px solid rgba(255,255,255,.82);
+      background:
+        linear-gradient(180deg,rgba(255,255,255,.95) 0%,rgba(247,249,252,.92) 100%);
+      box-shadow:var(--shadow-card);
+      animation:adminSurfaceIn .55s cubic-bezier(.22,1,.36,1) both;
+    }
+    .card::before{
+      content:"";
+      position:absolute;
+      left:20px;
+      right:20px;
+      top:0;
+      height:1px;
+      background:linear-gradient(90deg,transparent,rgba(255,255,255,.94),transparent);
+      pointer-events:none;
+    }
+    .title h1,
+    .section-head h2,
+    .panel-block h3{
+      letter-spacing:.015em;
+      font-weight:900;
+    }
+    .muted{color:#5c6a7b}
+    .nav a{
+      padding:10px 16px;
+      background:rgba(255,255,255,.74);
+      backdrop-filter:blur(12px);
+      border-color:var(--line-soft);
+      transition:transform .2s ease,box-shadow .2s ease,background .2s ease,color .2s ease,border-color .2s ease;
+    }
+    .nav a:hover{
+      transform:translateY(-1px);
+      box-shadow:0 12px 26px rgba(15,23,42,.08);
+      color:var(--text);
+    }
+    .nav a.active{
+      background:linear-gradient(135deg,var(--accent-blue-deep) 0%,var(--accent-blue) 100%);
+      border-color:#16365b;
+      color:#fff;
+      box-shadow:0 14px 30px rgba(15,23,42,.16);
+    }
+    .auth{
+      padding-top:6px;
+      gap:12px;
+    }
+    .layout{
+      grid-template-columns:minmax(0,1.72fr) minmax(320px,.78fr);
+      gap:14px;
+    }
+    input,textarea,button{
+      border-radius:16px;
+      padding:12px 14px;
+      font-family:inherit;
+      transition:border-color .2s ease,box-shadow .2s ease,transform .2s ease,background .2s ease,color .2s ease,filter .2s ease;
+    }
+    input,textarea{
+      background:rgba(255,255,255,.86);
+      border-color:rgba(203,213,225,.78);
+    }
+    input:focus,textarea:focus{
+      border-color:rgba(37,99,235,.42);
+      box-shadow:0 0 0 4px rgba(59,130,246,.12),0 12px 28px rgba(15,23,42,.06);
+    }
+    button{
+      background:linear-gradient(135deg,var(--accent-blue-deep) 0%,var(--accent-blue) 52%,var(--accent-blue-deep) 100%);
+      background-size:180% 180%;
+      box-shadow:0 14px 30px rgba(15,23,42,.16);
+    }
+    button:hover{
+      background-position:100% 50%;
+      filter:saturate(1.05);
+    }
+    button.secondary,
+    button.ghost{
+      background:rgba(255,255,255,.88);
+      border:1px solid rgba(203,213,225,.78);
+      color:var(--text);
+      box-shadow:0 10px 22px rgba(15,23,42,.05);
+    }
+    button.danger{
+      background:linear-gradient(135deg,#b91c1c 0%,#ef4444 100%);
+    }
+    .checkbox,
+    .pill{
+      background:rgba(255,255,255,.76);
+      border-color:rgba(203,213,225,.78);
+      backdrop-filter:blur(12px);
+      box-shadow:0 10px 24px rgba(15,23,42,.05);
+    }
+    .pill b{font-weight:800}
+    .table-wrap{
+      border:1px solid rgba(203,213,225,.72);
+      border-radius:20px;
+      background:rgba(255,255,255,.72);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.9);
+    }
+    th,td{
+      padding:10px 8px;
+      border-bottom-color:rgba(226,232,240,.9);
+    }
+    th{
+      background:rgba(248,250,252,.92);
+      backdrop-filter:blur(12px);
+      letter-spacing:.02em;
+    }
+    tbody tr{
+      transition:background .18s ease,transform .18s ease,box-shadow .18s ease;
+    }
+    tbody tr:hover{
+      background:linear-gradient(180deg,rgba(248,250,252,.98) 0%,rgba(241,245,249,.96) 100%);
+      transform:translateY(-1px);
+    }
+    tbody tr.selected{
+      background:linear-gradient(180deg,#edf4ff 0%,#e6efff 100%);
+      box-shadow:inset 3px 0 0 #315b8d;
+    }
+    .panel-nav{
+      padding:6px;
+      border-radius:20px;
+      background:linear-gradient(180deg,rgba(255,255,255,.84) 0%,rgba(241,245,249,.96) 100%);
+      border:1px solid rgba(203,213,225,.78);
+      box-shadow:0 12px 28px rgba(15,23,42,.06);
+    }
+    .panel-tab{
+      border-radius:16px;
+      padding:12px 14px;
+      font-weight:800;
+      transition:transform .2s ease,box-shadow .2s ease,background .2s ease,color .2s ease,border-color .2s ease;
+    }
+    .panel-tab.active{
+      background:linear-gradient(135deg,var(--accent-blue-deep) 0%,var(--accent-blue) 100%);
+      border-color:#16365b;
+      color:#fff;
+      box-shadow:0 14px 30px rgba(15,23,42,.14);
+    }
+    .panel-block{
+      position:relative;
+      padding:16px;
+      border-radius:18px;
+      background:linear-gradient(180deg,rgba(255,255,255,.98) 0%,rgba(246,249,252,.94) 100%);
+      box-shadow:0 12px 28px rgba(15,23,42,.06);
+    }
+    .panel-block::before{
+      content:"";
+      position:absolute;
+      inset:0 0 auto 0;
+      height:3px;
+      border-radius:18px 18px 0 0;
+      background:linear-gradient(90deg,var(--accent-blue-deep),#60a5fa,#0f766e);
+    }
+    .danger-block{
+      border-color:#fecaca;
+      background:linear-gradient(180deg,#fff6f6 0%,#fff1f1 100%);
+    }
+    .danger-block::before{
+      background:linear-gradient(90deg,#b91c1c,#ef4444,#fb7185);
+    }
+    .result{
+      border-radius:18px;
+      border-color:rgba(203,213,225,.74);
+      background:linear-gradient(180deg,rgba(255,255,255,.96) 0%,rgba(246,249,252,.92) 100%);
+      box-shadow:0 12px 28px rgba(15,23,42,.05);
+    }
+    @media (min-width:1081px){
+      .layout>.card:last-child{
+        position:sticky;
+        top:16px;
+      }
+    }
+    @media (max-width:760px){
+      body{padding:10px}
+      .card{
+        padding:16px;
+        border-radius:20px;
+      }
+      .summary{
+        gap:8px;
+      }
+      .pill{
+        width:100%;
+        justify-content:space-between;
+      }
+    }
+    @media (prefers-reduced-motion:reduce){
+      html{scroll-behavior:auto}
+      *,*::before,*::after{
+        animation:none!important;
+        transition:none!important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="card">
+      <div class="header-top">
+        <div class="title">
+          <h1>用户总览</h1>
+          <div class="muted">查看用户列表、记录备注，并对余额、免服务费次数和密码进行后台管理。</div>
+        </div>
+        <div class="nav">
+          <a href="/admin/orders">订单总览</a>
+          <a class="active" href="/admin/users">用户总览</a>
+        </div>
+      </div>
+      <div class="auth">
+        <label class="field">
+          <span>后台用户名</span>
+          <input id="username" placeholder="后台用户名">
+        </label>
+        <label class="field">
+          <span>后台密码</span>
+          <input id="password" type="password" placeholder="后台密码">
+        </label>
+        <button id="login" type="button">登录后台</button>
+        <button id="logout" class="secondary" type="button">退出后台</button>
+        <button id="refresh" class="ghost" type="button">刷新列表</button>
+      </div>
+    </section>
+
+    <div class="layout">
+      <section class="card">
+        <div class="section-head">
+          <div>
+            <h2 style="margin:0;font-size:20px">用户列表</h2>
+            <div class="muted">支持按手机号搜索，也可以筛选出所有已经成功充值过的用户。</div>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <input id="userQuery" placeholder="搜索手机号" style="max-width:260px;">
+            <label class="checkbox">
+              <input id="rechargedOnly" type="checkbox">
+              <span>仅看已充值用户</span>
+            </label>
+          </div>
+          <div class="toolbar-right">
+            <button id="searchUsers" class="secondary" type="button" style="width:auto">应用筛选</button>
+            <button id="resetSearch" class="ghost" type="button" style="width:auto">清空筛选</button>
+          </div>
+        </div>
+
+        <div class="summary">
+          <span class="pill">选中用户 ID：<b id="selectedUserId">-</b></span>
+          <span class="pill">手机号：<b id="selectedUserPhone">-</b></span>
+          <span class="pill">余额：<b id="selectedUserBalance">-</b></span>
+          <span class="pill">免服务费次数：<b id="selectedUserFreeCharge">-</b></span>
+          <span class="pill">成功充值次数：<b id="selectedUserRechargeCount">-</b></span>
+          <button id="clearSelection" class="ghost" type="button" style="width:auto">清除选择</button>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>手机号</th>
+                <th>余额(元)</th>
+                <th>免服务费次数</th>
+                <th>成功充值次数</th>
+                <th>备注</th>
+                <th>注册时间</th>
+              </tr>
+            </thead>
+            <tbody id="userTbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="section-head">
+          <div>
+            <h2 style="margin:0;font-size:20px">用户操作</h2>
+            <div class="muted">右侧操作只对当前选中的用户生效。</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-block">
+            <h3>用户备注</h3>
+            <textarea id="manualUserNote" placeholder="例如：线下熟客、代充值账号、需要人工提醒等"></textarea>
+            <div class="controls">
+              <button id="saveUserNote" type="button">保存备注</button>
+            </div>
+            <div class="muted">备注仅用于后台分辨用户，最多 200 个字符。</div>
+          </div>
+
+          <div class="panel-block">
+            <h3>余额调整</h3>
+            <div class="controls">
+              <input id="manualBalanceAmount" placeholder="调整金额，可正可负" style="max-width:180px;">
+              <input id="manualBalanceTarget" placeholder="直接设置目标余额" style="max-width:180px;">
+            </div>
+            <input id="manualBalanceReason" placeholder="变动备注，例如：后台补单">
+            <div class="controls">
+              <button id="adjustBalance" type="button">调整余额</button>
+              <button id="setBalance" class="ghost" type="button">覆盖设置余额</button>
+            </div>
+          </div>
+
+          <div class="panel-block">
+            <h3>免服务费次数调整</h3>
+            <div class="controls">
+              <input id="manualFreeChargeCount" placeholder="设置免服务费次数(整数)" style="max-width:220px;">
+              <button id="adjustFreeCharge" type="button">更新次数</button>
+            </div>
+          </div>
+
+          <div class="panel-block">
+            <h3>重置密码</h3>
+            <div class="controls">
+              <input id="resetPasswordValue" type="password" placeholder="新密码，至少 6 位" style="max-width:220px;">
+              <button id="resetPassword" type="button">重置密码</button>
+            </div>
+          </div>
+
+          <div class="panel-block danger-block">
+            <h3>删除用户</h3>
+            <div class="controls">
+              <input id="deleteConfirmPhone" placeholder="确认手机号" style="max-width:220px;">
+              <label class="checkbox">
+                <input id="purgeOrders" type="checkbox">
+                <span>同时删除订单</span>
+              </label>
+            </div>
+            <button id="deleteUser" class="danger" type="button">删除用户</button>
+            <div class="muted">删除后该手机号仍可重新注册。</div>
+          </div>
+        </div>
+
+        <div id="userResult" class="result"></div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const usernameInput=document.getElementById("username");
+    const passwordInput=document.getElementById("password");
+    const loginButton=document.getElementById("login");
+    const logoutButton=document.getElementById("logout");
+    const refreshButton=document.getElementById("refresh");
+    const searchButton=document.getElementById("searchUsers");
+    const resetSearchButton=document.getElementById("resetSearch");
+    const clearSelectionButton=document.getElementById("clearSelection");
+    const userQuery=document.getElementById("userQuery");
+    const rechargedOnly=document.getElementById("rechargedOnly");
+    const userTbody=document.getElementById("userTbody");
+    const userResult=document.getElementById("userResult");
+
+    const selectedUserId=document.getElementById("selectedUserId");
+    const selectedUserPhone=document.getElementById("selectedUserPhone");
+    const selectedUserBalance=document.getElementById("selectedUserBalance");
+    const selectedUserFreeCharge=document.getElementById("selectedUserFreeCharge");
+    const selectedUserRechargeCount=document.getElementById("selectedUserRechargeCount");
+    const selectedUserCreatedAt=document.createElement("b");
+    const selectedUserCreatedAtPill=document.createElement("span");
+    const selectedUserLastOrderAt=document.createElement("b");
+    const selectedUserLastOrderAtPill=document.createElement("span");
+    const panelRoot=document.querySelector(".panel");
+    const panelBlocks=panelRoot?[...panelRoot.querySelectorAll(".panel-block")]:[];
+    const panelNav=document.createElement("div");
+    selectedUserCreatedAt.id="selectedUserCreatedAt";
+    selectedUserCreatedAt.textContent="-";
+    selectedUserCreatedAtPill.className="pill";
+    selectedUserCreatedAtPill.append("\u6ce8\u518c\u65f6\u95f4\uff1a",selectedUserCreatedAt);
+    clearSelectionButton.parentNode.insertBefore(selectedUserCreatedAtPill,clearSelectionButton);
+    selectedUserLastOrderAt.id="selectedUserLastOrderAt";
+    selectedUserLastOrderAt.textContent="-";
+    selectedUserLastOrderAtPill.className="pill";
+    selectedUserLastOrderAtPill.append("\u6700\u540e\u4e0b\u5355\u65f6\u95f4\uff1a",selectedUserLastOrderAt);
+    clearSelectionButton.parentNode.insertBefore(selectedUserLastOrderAtPill,clearSelectionButton);
+    panelNav.className="panel-nav";
+    if(panelRoot&&panelRoot.parentNode){
+      panelRoot.parentNode.insertBefore(panelNav,panelRoot);
+    }
+
+    const manualUserNote=document.getElementById("manualUserNote");
+    const saveUserNoteButton=document.getElementById("saveUserNote");
+    const manualBalanceAmount=document.getElementById("manualBalanceAmount");
+    const manualBalanceTarget=document.getElementById("manualBalanceTarget");
+    const manualBalanceReason=document.getElementById("manualBalanceReason");
+    const manualFreeChargeCount=document.getElementById("manualFreeChargeCount");
+    const resetPasswordValue=document.getElementById("resetPasswordValue");
+    const deleteConfirmPhone=document.getElementById("deleteConfirmPhone");
+    const purgeOrders=document.getElementById("purgeOrders");
+
+    let adminReady=false;
+    let currentUserId=null;
+    let currentUserPhone="";
+    let currentUserBalance=0;
+    let currentUserFreeCharge=0;
+    let currentUserNote="";
+    let currentUserRechargeCount=0;
+    let currentUserCreatedAt="";
+    let currentUserLastOrderAt="";
+    let lastUsers=[];
+
+    function showBox(text){
+      userResult.style.display="block";
+      userResult.textContent=text;
+    }
+
+    function escapeHtml(value){
+      return String(value||"").replace(/[&<>"']/g,(char)=>({
+        "&":"&amp;",
+        "<":"&lt;",
+        ">":"&gt;",
+        "\"":"&quot;",
+        "'":"&#39;"
+      })[char]);
+    }
+
+    function withToken(url){
+      const target=new URL(url,window.location.origin);
+      return target.pathname+target.search;
+    }
+
+    function formatDateTime(value){
+      const raw=String(value||"").trim();
+      if(!raw)return "-";
+      const date=new Date(raw);
+      if(Number.isNaN(date.getTime()))return raw;
+      return date.toLocaleString("zh-CN",{
+        hour12:false,
+        year:"numeric",
+        month:"2-digit",
+        day:"2-digit",
+        hour:"2-digit",
+        minute:"2-digit",
+        second:"2-digit"
+      });
+    }
+
+    function ensureLastOrderColumn(){
+      const headRow=document.querySelector(".table-wrap thead tr");
+      if(!headRow||headRow.querySelector("[data-col='last-order']"))return;
+      const th=document.createElement("th");
+      th.dataset.col="last-order";
+      th.textContent="\u6700\u540e\u4e0b\u5355\u65f6\u95f4";
+      headRow.appendChild(th);
+    }
+
+    function setActivePanel(panelKey){
+      panelBlocks.forEach((block)=>block.classList.toggle("active",block.dataset.panelKey===panelKey));
+      panelNav.querySelectorAll("button[data-panel-key]").forEach((button)=>{
+        button.classList.toggle("active",button.dataset.panelKey===panelKey);
+      });
+    }
+
+    function buildPanelNav(){
+      if(!panelBlocks.length)return;
+      const labels=[
+        "\u7528\u6237\u5907\u6ce8",
+        "\u4f59\u989d\u8c03\u6574",
+        "\u514d\u670d\u52a1\u8d39\u6b21\u6570",
+        "\u91cd\u7f6e\u5bc6\u7801",
+        "\u5220\u9664\u7528\u6237"
+      ];
+      panelBlocks.forEach((block,index)=>{
+        const key=`panel-${index}`;
+        block.dataset.panelKey=key;
+        const tab=document.createElement("button");
+        tab.type="button";
+        tab.className="panel-tab";
+        tab.dataset.panelKey=key;
+        tab.textContent=labels[index]||`\u529f\u80fd ${index+1}`;
+        tab.onclick=()=>setActivePanel(key);
+        panelNav.appendChild(tab);
+      });
+      setActivePanel(panelBlocks[0].dataset.panelKey||"panel-0");
+    }
+
+    function applyReadableCopy(){
+      document.title="\u7528\u6237\u603b\u89c8";
+      const titleWrap=document.querySelector(".title");
+      if(titleWrap){
+        const title=titleWrap.querySelector("h1");
+        const desc=titleWrap.querySelector(".muted");
+        if(title)title.textContent="\u7528\u6237\u603b\u89c8";
+        if(desc)desc.textContent="\u67e5\u770b\u7528\u6237\u5217\u8868\u3001\u5907\u6ce8\u548c\u5173\u952e\u65f6\u95f4\uff0c\u5e76\u5bf9\u4f59\u989d\u3001\u514d\u670d\u52a1\u8d39\u6b21\u6570\u4e0e\u5bc6\u7801\u8fdb\u884c\u540e\u53f0\u7ba1\u7406\u3002";
+      }
+      const navLinks=document.querySelectorAll(".nav a");
+      if(navLinks[0])navLinks[0].textContent="\u8ba2\u5355\u603b\u89c8";
+      if(navLinks[1])navLinks[1].textContent="\u7528\u6237\u603b\u89c8";
+
+      const authLabels=document.querySelectorAll(".auth .field span");
+      if(authLabels[0])authLabels[0].textContent="\u540e\u53f0\u7528\u6237\u540d";
+      if(authLabels[1])authLabels[1].textContent="\u540e\u53f0\u5bc6\u7801";
+      usernameInput.placeholder="\u8bf7\u8f93\u5165\u540e\u53f0\u7528\u6237\u540d";
+      passwordInput.placeholder="\u8bf7\u8f93\u5165\u540e\u53f0\u5bc6\u7801";
+      loginButton.textContent="\u767b\u5f55\u540e\u53f0";
+      logoutButton.textContent="\u9000\u51fa\u767b\u5f55";
+      refreshButton.textContent="\u5237\u65b0\u5217\u8868";
+
+      const sectionHeads=document.querySelectorAll(".section-head");
+      if(sectionHeads[0]){
+        const h2=sectionHeads[0].querySelector("h2");
+        const muted=sectionHeads[0].querySelector(".muted");
+        if(h2)h2.textContent="\u7528\u6237\u5217\u8868";
+        if(muted)muted.textContent="\u652f\u6301\u6309\u624b\u673a\u53f7\u641c\u7d22\uff0c\u4e5f\u53ef\u4ee5\u7b5b\u9009\u51fa\u6240\u6709\u5df2\u7ecf\u5145\u503c\u8fc7\u7684\u7528\u6237\u3002";
+      }
+      if(sectionHeads[1]){
+        const h2=sectionHeads[1].querySelector("h2");
+        const muted=sectionHeads[1].querySelector(".muted");
+        if(h2)h2.textContent="\u7528\u6237\u64cd\u4f5c";
+        if(muted)muted.textContent="\u53f3\u4fa7\u64cd\u4f5c\u53ea\u5bf9\u5f53\u524d\u9009\u4e2d\u7684\u7528\u6237\u751f\u6548\u3002";
+      }
+
+      userQuery.placeholder="\u641c\u7d22\u624b\u673a\u53f7";
+      const checks=document.querySelectorAll(".checkbox span");
+      if(checks[0])checks[0].textContent="\u4ec5\u770b\u5df2\u5145\u503c\u7528\u6237";
+      if(checks[1])checks[1].textContent="\u540c\u65f6\u5220\u9664\u8ba2\u5355";
+      searchButton.textContent="\u5e94\u7528\u7b5b\u9009";
+      resetSearchButton.textContent="\u6e05\u7a7a\u7b5b\u9009";
+      clearSelectionButton.textContent="\u6e05\u9664\u9009\u62e9";
+
+      const summaryPills=[...document.querySelectorAll(".summary .pill")];
+      if(summaryPills[0])summaryPills[0].replaceChildren("\u9009\u4e2d\u7528\u6237 ID\uff1a",selectedUserId);
+      if(summaryPills[1])summaryPills[1].replaceChildren("\u624b\u673a\u53f7\uff1a",selectedUserPhone);
+      if(summaryPills[2])summaryPills[2].replaceChildren("\u4f59\u989d\uff1a",selectedUserBalance);
+      if(summaryPills[3])summaryPills[3].replaceChildren("\u514d\u670d\u52a1\u8d39\u6b21\u6570\uff1a",selectedUserFreeCharge);
+      if(summaryPills[4])summaryPills[4].replaceChildren("\u6210\u529f\u5145\u503c\u6b21\u6570\uff1a",selectedUserRechargeCount);
+      if(summaryPills[5])summaryPills[5].replaceChildren("\u6ce8\u518c\u65f6\u95f4\uff1a",selectedUserCreatedAt);
+      if(summaryPills[6])summaryPills[6].replaceChildren("\u6700\u540e\u4e0b\u5355\u65f6\u95f4\uff1a",selectedUserLastOrderAt);
+
+      const headerRow=document.querySelector(".table-wrap thead tr");
+      if(headerRow){
+        const labels=["ID","\u624b\u673a\u53f7","\u4f59\u989d(\u5143)","\u514d\u670d\u52a1\u8d39\u6b21\u6570","\u6210\u529f\u5145\u503c\u6b21\u6570","\u5907\u6ce8","\u6ce8\u518c\u65f6\u95f4","\u6700\u540e\u4e0b\u5355\u65f6\u95f4"];
+        [...headerRow.children].forEach((cell,index)=>{cell.textContent=labels[index]||cell.textContent;});
+      }
+
+      const blockTitles=panelBlocks.map((block)=>block.querySelector("h3"));
+      const blockMuted=[
+        panelBlocks[0]?.querySelector(".muted"),
+        null,
+        null,
+        null,
+        panelBlocks[4]?.querySelector(".muted")
+      ];
+      if(blockTitles[0])blockTitles[0].textContent="\u7528\u6237\u5907\u6ce8";
+      if(blockMuted[0])blockMuted[0].textContent="\u5907\u6ce8\u4ec5\u7528\u4e8e\u540e\u53f0\u5206\u8fa8\u7528\u6237\uff0c\u6700\u591a 200 \u4e2a\u5b57\u7b26\u3002";
+      if(blockTitles[1])blockTitles[1].textContent="\u4f59\u989d\u8c03\u6574";
+      if(blockTitles[2])blockTitles[2].textContent="\u514d\u670d\u52a1\u8d39\u6b21\u6570\u8c03\u6574";
+      if(blockTitles[3])blockTitles[3].textContent="\u91cd\u7f6e\u5bc6\u7801";
+      if(blockTitles[4])blockTitles[4].textContent="\u5220\u9664\u7528\u6237";
+      if(blockMuted[4])blockMuted[4].textContent="\u5220\u9664\u540e\u8be5\u624b\u673a\u53f7\u4ecd\u53ef\u91cd\u65b0\u6ce8\u518c\u3002";
+
+      manualUserNote.placeholder="\u4f8b\u5982\uff1a\u7ebf\u4e0b\u719f\u5ba2\u3001\u4ee3\u5145\u503c\u8d26\u53f7\u3001\u9700\u8981\u4eba\u5de5\u63d0\u9192\u7b49";
+      saveUserNoteButton.textContent="\u4fdd\u5b58\u5907\u6ce8";
+      manualBalanceAmount.placeholder="\u8c03\u6574\u91d1\u989d\uff0c\u53ef\u6b63\u53ef\u8d1f";
+      manualBalanceTarget.placeholder="\u76f4\u63a5\u8bbe\u7f6e\u76ee\u6807\u4f59\u989d";
+      manualBalanceReason.placeholder="\u53d8\u52a8\u5907\u6ce8\uff0c\u4f8b\u5982\uff1a\u540e\u53f0\u8865\u5355";
+      document.getElementById("adjustBalance").textContent="\u8c03\u6574\u4f59\u989d";
+      document.getElementById("setBalance").textContent="\u8986\u76d6\u8bbe\u7f6e\u4f59\u989d";
+      manualFreeChargeCount.placeholder="\u8bbe\u7f6e\u514d\u670d\u52a1\u8d39\u6b21\u6570\uff08\u6574\u6570\uff09";
+      document.getElementById("adjustFreeCharge").textContent="\u66f4\u65b0\u6b21\u6570";
+      resetPasswordValue.placeholder="\u65b0\u5bc6\u7801\uff0c\u81f3\u5c11 6 \u4f4d";
+      document.getElementById("resetPassword").textContent="\u91cd\u7f6e\u5bc6\u7801";
+      deleteConfirmPhone.placeholder="\u786e\u8ba4\u624b\u673a\u53f7";
+      document.getElementById("deleteUser").textContent="\u5220\u9664\u7528\u6237";
+    }
+
+    async function requestJson(url,options={}){
+      const headers={...(options.headers||{})};
+      const resp=await fetch(withToken(url),{
+        credentials:"same-origin",
+        ...options,
+        headers
+      });
+      const text=await resp.text();
+      let data={};
+      try{data=text?JSON.parse(text):{}}catch{data={raw:text}}
+      if(resp.status===401){
+        setAuthState(false,"请先登录后台");
+      }
+      if(!resp.ok)throw new Error(data.detail||data.raw||`HTTP ${resp.status}`);
+      return data;
+    }
+
+    function setAuthState(ready,message=""){
+      adminReady=!!ready;
+      loginButton.disabled=adminReady;
+      logoutButton.disabled=!adminReady;
+      usernameInput.disabled=adminReady;
+      passwordInput.disabled=adminReady;
+      if(message)showBox(message);
+    }
+
+    function updateSelectedSummary(){
+      selectedUserId.textContent=currentUserId?String(currentUserId):"-";
+      selectedUserPhone.textContent=currentUserPhone||"-";
+      selectedUserBalance.textContent=currentUserId?`${Number(currentUserBalance||0).toFixed(2)} \u5143`:"-";
+      selectedUserFreeCharge.textContent=currentUserId?String(Number(currentUserFreeCharge||0)):"-";
+      selectedUserRechargeCount.textContent=currentUserId?String(Number(currentUserRechargeCount||0)):"-";
+      selectedUserCreatedAt.textContent=currentUserId?formatDateTime(currentUserCreatedAt):"-";
+      selectedUserLastOrderAt.textContent=currentUserId?formatDateTime(currentUserLastOrderAt):"-";
+      manualUserNote.value=currentUserId?currentUserNote:"";
+    }
+
+    function updateSelectedRow(){
+      userTbody.querySelectorAll("tr[data-user-id]").forEach((row)=>{
+        row.classList.toggle("selected",currentUserId&&String(row.dataset.userId)===String(currentUserId));
+      });
+    }
+
+    function setSelectedUser(user){
+      if(!user){
+        currentUserId=null;
+        currentUserPhone="";
+        currentUserBalance=0;
+        currentUserFreeCharge=0;
+        currentUserNote="";
+        currentUserRechargeCount=0;
+        currentUserCreatedAt="";
+        currentUserLastOrderAt="";
+      }else{
+        currentUserId=Number(user.id);
+        currentUserPhone=String(user.phone||"");
+        currentUserBalance=Number(user.balance_yuan||0);
+        currentUserFreeCharge=Number(user.free_charge_count||0);
+        currentUserNote=String(user.user_note||"");
+        currentUserRechargeCount=Number(user.recharge_count||0);
+        currentUserCreatedAt=String(user.created_at||"");
+        currentUserLastOrderAt=String(user.last_order_at||"");
+      }
+      updateSelectedSummary();
+      updateSelectedRow();
+    }
+
+    function currentListUrl(limit){
+      const params=new URLSearchParams();
+      params.set("limit",String(limit||500));
+      const q=(userQuery.value||"").trim();
+      if(q)params.set("q",q);
+      if(rechargedOnly.checked)params.set("recharged_only","true");
+      return `/api/admin/users?${params.toString()}`;
+    }
+
+    function renderUsers(users){
+      lastUsers=Array.isArray(users)?users:[];
+      if(!lastUsers.length){
+        userTbody.innerHTML='<tr><td colspan="8" class="muted">暂无符合条件的用户</td></tr>';
+        setSelectedUser(null);
+        return;
+      }
+      userTbody.innerHTML=lastUsers.map((user)=>{
+        const balance=Number(user.balance_yuan||0).toFixed(2);
+        const freeCharge=Number(user.free_charge_count||0);
+        const rechargeCount=Number(user.recharge_count||0);
+        const note=String(user.user_note||"");
+        const createdAt=formatDateTime(user.created_at);
+        const lastOrderAt=formatDateTime(user.last_order_at);
+        return `
+          <tr data-user-id="${user.id}">
+            <td>${user.id}</td>
+            <td>${escapeHtml(user.phone||"-")}</td>
+            <td>${balance}</td>
+            <td>${freeCharge}</td>
+            <td>${rechargeCount}</td>
+            <td class="note-cell">${escapeHtml(note||"-")}</td>
+            <td>${escapeHtml(createdAt)}</td>
+            <td>${escapeHtml(lastOrderAt)}</td>
+          </tr>
+        `;
+      }).join("");
+
+      if(currentUserId){
+        const match=lastUsers.find((user)=>String(user.id)===String(currentUserId));
+        if(match){
+          setSelectedUser(match);
+        }else{
+          setSelectedUser(null);
+        }
+      }else{
+        updateSelectedRow();
+      }
+    }
+
+    async function refreshUsers(){
+      if(!adminReady){
+        showBox("请先登录后台");
+        return;
+      }
+      const users=await requestJson(currentListUrl(500));
+      renderUsers(users);
+    }
+
+    async function loginAdmin(){
+      const username=usernameInput.value.trim();
+      const password=passwordInput.value;
+      const resp=await fetch("/api/admin/login",{
+        method:"POST",
+        credentials:"same-origin",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({username,password})
+      });
+      const text=await resp.text();
+      let data={};
+      try{data=text?JSON.parse(text):{}}catch{data={raw:text}}
+      if(!resp.ok)throw new Error(data.detail||data.raw||`HTTP ${resp.status}`);
+      setAuthState(true,`已登录后台：${data.username||username}`);
+      await refreshUsers();
+    }
+
+    async function logoutAdmin(){
+      await fetch("/api/admin/logout",{method:"POST",credentials:"same-origin"});
+      setAuthState(false,"已退出后台，请重新登录");
+      passwordInput.value="";
+      renderUsers([]);
+    }
+
+    async function bootstrapAdmin(){
+      try{
+        const data=await requestJson("/api/admin/me");
+        setAuthState(true,`已登录后台：${data.username||"-"}`);
+        await refreshUsers();
+      }catch{
+        setAuthState(false,"请输入后台用户名和密码后登录");
+        renderUsers([]);
+      }
+    }
+
+    async function searchUsers(){
+      await refreshUsers();
+      showBox("筛选条件已应用");
+    }
+
+    async function saveUserNote(){
+      if(!currentUserId){
+        showBox("请先选择一个用户");
+        return;
+      }
+      const note=(manualUserNote.value||"").trim();
+      const data=await requestJson(`/api/admin/users/${currentUserId}/note`,{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({user_note:note})
+      });
+      currentUserNote=data.user_note||"";
+      showBox(`用户备注已保存：#${currentUserId}`);
+      await refreshUsers();
+    }
+
+    async function adjustBalance(){
+      if(!currentUserId){
+        showBox("请先选择一个用户");
+        return;
+      }
+      const amount=Number(manualBalanceAmount.value||"0");
+      if(!Number.isFinite(amount)||amount===0){
+        showBox("请输入正确的调整金额");
+        return;
+      }
+      const reason=(manualBalanceReason.value||"").trim()||"admin_adjust";
+      const data=await requestJson(`/api/admin/users/${currentUserId}/balance`,{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({delta_yuan:amount,reason})
+      });
+      showBox(`余额已调整：${amount>0?"+":""}${amount.toFixed(2)}\n当前余额：${Number(data.balance_yuan||0).toFixed(2)}`);
+      await refreshUsers();
+    }
+
+    async function setBalance(){
+      if(!currentUserId){
+        showBox("请先选择一个用户");
+        return;
+      }
+      const target=Number(manualBalanceTarget.value||"");
+      if(!Number.isFinite(target)||target<0){
+        showBox("请输入正确的目标余额");
+        return;
+      }
+      const reason=(manualBalanceReason.value||"").trim()||"admin_set_balance";
+      const data=await requestJson(`/api/admin/users/${currentUserId}/balance/set`,{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({balance_yuan:target,reason})
+      });
+      showBox(`余额已设置为：${Number(data.balance_yuan||0).toFixed(2)}\n本次变动：${Number(data.delta_yuan||0)>0?"+":""}${Number(data.delta_yuan||0).toFixed(2)}`);
+      await refreshUsers();
+    }
+
+    async function adjustFreeCharge(){
+      if(!currentUserId){
+        showBox("请先选择一个用户");
+        return;
+      }
+      const count=Number(manualFreeChargeCount.value||"");
+      if(!Number.isFinite(count)||count<0||!Number.isInteger(count)){
+        showBox("请输入正确的免服务费次数");
+        return;
+      }
+      const data=await requestJson(`/api/admin/users/${currentUserId}/free-charge`,{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({free_charge_count:count})
+      });
+      showBox(`免服务费次数已更新：${data.free_charge_count}`);
+      await refreshUsers();
+    }
+
+    async function resetPassword(){
+      if(!currentUserId){
+        showBox("请先选择一个用户");
+        return;
+      }
+      const newPassword=(resetPasswordValue.value||"").trim();
+      if(newPassword.length<6){
+        showBox("请输入至少 6 位的新密码");
+        return;
+      }
+      const data=await requestJson(`/api/admin/users/${currentUserId}/password`,{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({new_password:newPassword})
+      });
+      resetPasswordValue.value="";
+      showBox(`已重置用户密码：#${data.user_id}\n手机号：${data.phone||"-"}`);
+    }
+
+    async function deleteUser(){
+      if(!currentUserId){
+        showBox("请先选择一个用户");
+        return;
+      }
+      const phone=(deleteConfirmPhone.value||"").trim();
+      if(!phone){
+        showBox("请输入确认手机号");
+        return;
+      }
+      if(currentUserPhone&&phone!==currentUserPhone){
+        showBox("确认手机号与选中用户不一致");
+        return;
+      }
+      if(!window.confirm(`确认删除用户 #${currentUserId} 吗？删除后可重新用同一手机号注册。`))return;
+      const data=await requestJson(`/api/admin/users/${currentUserId}/delete`,{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({confirm_phone:phone,purge_orders:!!purgeOrders.checked})
+      });
+      setSelectedUser(null);
+      deleteConfirmPhone.value="";
+      showBox(`已删除用户：#${data.user_id}\n手机号：${data.phone||"-"}\n删除订单：${data.orders_deleted||0}\n匿名化订单：${data.orders_anonymized||0}`);
+      await refreshUsers();
+    }
+
+    userTbody.addEventListener("click",(event)=>{
+      const row=event.target.closest("tr[data-user-id]");
+      if(!row)return;
+      const user=lastUsers.find((item)=>String(item.id)===String(row.dataset.userId));
+      if(!user)return;
+      setSelectedUser(user);
+      showBox(`已选中用户 #${user.id}`);
+    });
+
+    loginButton.onclick=()=>loginAdmin().catch((error)=>setAuthState(false,`登录失败：${error.message}`));
+    logoutButton.onclick=()=>logoutAdmin().catch((error)=>showBox(error.message));
+    refreshButton.onclick=()=>refreshUsers().catch((error)=>showBox(error.message));
+    searchButton.onclick=()=>searchUsers().catch((error)=>showBox(error.message));
+    resetSearchButton.onclick=()=>{
+      userQuery.value="";
+      rechargedOnly.checked=false;
+      refreshUsers().catch((error)=>showBox(error.message));
+    };
+    clearSelectionButton.onclick=()=>{
+      setSelectedUser(null);
+      showBox("已清除选择");
+    };
+    saveUserNoteButton.onclick=()=>saveUserNote().catch((error)=>showBox(error.message));
+    document.getElementById("adjustBalance").onclick=()=>adjustBalance().catch((error)=>showBox(error.message));
+    document.getElementById("setBalance").onclick=()=>setBalance().catch((error)=>showBox(error.message));
+    document.getElementById("adjustFreeCharge").onclick=()=>adjustFreeCharge().catch((error)=>showBox(error.message));
+    document.getElementById("resetPassword").onclick=()=>resetPassword().catch((error)=>showBox(error.message));
+    document.getElementById("deleteUser").onclick=()=>deleteUser().catch((error)=>showBox(error.message));
+    userQuery.addEventListener("keydown",(event)=>{
+      if(event.key==="Enter"){
+        event.preventDefault();
+        searchUsers().catch((error)=>showBox(error.message));
+      }
+    });
+    passwordInput.addEventListener("keydown",(event)=>{
+      if(event.key==="Enter"){
+        event.preventDefault();
+        loginAdmin().catch((error)=>setAuthState(false,`鐧诲綍澶辫触锛?{error.message}`));
+      }
+    });
+    rechargedOnly.addEventListener("change",()=>refreshUsers().catch((error)=>showBox(error.message)));
+
+    ensureLastOrderColumn();
+    applyReadableCopy();
+    buildPanelNav();
+    bootstrapAdmin();
+  </script>
+</body>
+</html>

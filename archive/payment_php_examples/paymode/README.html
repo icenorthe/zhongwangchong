@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>平安夜支付中转集成方案</title>
+    <style>
+        body {
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #3498db;
+            margin-top: 30px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+        h3 {
+            color: #2980b9;
+            margin-top: 25px;
+        }
+        code {
+            background-color: #f8f8f8;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            font-family: Consolas, Monaco, 'Andale Mono', monospace;
+            padding: 2px 4px;
+            color: #c7254e;
+        }
+        pre {
+            background-color: #f8f8f8;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            padding: 10px;
+            overflow: auto;
+            margin: 15px 0;
+        }
+        pre code {
+            border: none;
+            padding: 0;
+            background-color: transparent;
+        }
+        ul, ol {
+            padding-left: 25px;
+        }
+        li {
+            margin-bottom: 5px;
+        }
+        .highlight {
+            background-color: #ffffcc;
+            padding: 2px;
+        }
+        .note {
+            background-color: #f0f7fd;
+            border-left: 4px solid #3498db;
+            padding: 10px;
+            margin: 15px 0;
+        }
+        a {
+            color: #3498db;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .file {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>平安夜支付中转集成方案</h1>
+    
+    <p>本目录包含平安夜支付的中转集成方案，让用户无需跳转到支付平台即可完成付款，极大降低了集成门槛。</p>
+    
+    <h2>文件说明</h2>
+    
+    <ul>
+        <li><span class="file">submit.php</span>: 主要的支付中转文件，包含所有支付功能</li>
+        <li><span class="file">notify.php</span>: 异步通知处理示例</li>
+        <li><span class="file">return.php</span>: 同步跳转处理示例</li>
+        <li><span class="file">demo.php</span>: 支付中转演示页面</li>
+        <li><span class="file">api_demo.php</span>: API调用演示页面</li>
+    </ul>
+    
+    <h2>快速开始</h2>
+    
+    <ol>
+        <li>
+            <p>修改 <code>submit.php</code> 中的配置信息：</p>
+            <pre><code>$config = [
+    // API基础URL
+    'api_url' => 'https://pro.qjpay.icu',
+    
+    // 商户信息
+    'merchant' => [
+        'pid' => '您的商户ID',
+        'key' => '您的商户密钥',
+    ],
+    
+    // 回调地址
+    'callback' => [
+        'notify_url' => 'http://您的域名/notify.php',
+        'return_url' => 'http://您的域名/return.php',
+    ],
+    
+    // 网站名称
+    'site_name' => '您的网站名称',
+];</code></pre>
+        </li>
+        <li>
+            <p>确保 <code>notify.php</code> 和 <code>return.php</code> 中的商户密钥与 <code>submit.php</code> 中的一致。</p>
+        </li>
+        <li>
+            <p>访问 <code>demo.php</code> 查看演示页面，或访问 <code>api_demo.php</code> 查看API调用示例。</p>
+        </li>
+    </ol>
+    
+    <h2>使用方法</h2>
+    
+    <h3>1. 直接调用方式</h3>
+    
+    <p>通过链接或按钮直接跳转到支付页面：</p>
+    
+    <pre><code>&lt;a href="submit.php?type=alipay&name=VIP会员&money=0.01"&gt;支付宝支付&lt;/a&gt;
+&lt;a href="submit.php?type=wxpay&name=高级会员&money=0.01"&gt;微信支付&lt;/a&gt;
+&lt;a href="submit.php?type=qqpay&name=超级会员&money=0.01"&gt;QQ钱包支付&lt;/a&gt;</code></pre>
+    
+    <h3>2. 用户自选支付方式</h3>
+    
+    <p>如果不指定支付方式，用户可以自由选择：</p>
+    
+    <pre><code>&lt;a href="submit.php?name=VIP会员&money=0.01"&gt;去支付&lt;/a&gt;</code></pre>
+    
+    <h3>3. 表单提交方式</h3>
+    
+    <p>通过表单提交支付参数：</p>
+    
+    <pre><code>&lt;form action="submit.php" method="post"&gt;
+    &lt;select name="type"&gt;
+        &lt;option value=""&gt;用户自选&lt;/option&gt;
+        &lt;option value="alipay"&gt;支付宝&lt;/option&gt;
+        &lt;option value="wxpay"&gt;微信支付&lt;/option&gt;
+        &lt;option value="qqpay"&gt;QQ钱包&lt;/option&gt;
+    &lt;/select&gt;
+    &lt;input type="text" name="name" value="自定义商品" required&gt;
+    &lt;input type="number" name="money" value="0.01" min="0.01" step="0.01" required&gt;
+    &lt;input type="text" name="out_trade_no" placeholder="留空自动生成"&gt;
+    &lt;button type="submit"&gt;提交支付&lt;/button&gt;
+&lt;/form&gt;</code></pre>
+    
+    <h3>4. API调用方式</h3>
+    
+    <p>在PHP代码中调用支付函数：</p>
+    
+    <pre><code>// 引入支付中转文件
+require_once 'submit.php';
+
+// 调用创建订单函数
+$result = create_payment_order(
+    'alipay',       // 支付方式
+    '高级会员套餐', // 商品名称
+    9.99,          // 支付金额
+    'ORDER'.time()  // 订单号（可选）
+);
+
+// 处理返回结果
+if ($result['code'] == 1) {
+    // 获取支付二维码和H5链接
+    $qrcode = $result['qrcode'];
+    $h5_url = $result['h5_qrurl'];
+    // 自定义显示支付页面...
+} else {
+    // 处理错误...
+    echo $result['msg'];
+}</code></pre>
+    
+    <h2>回调处理</h2>
+    
+    <h3>异步通知处理</h3>
+    
+    <p>平安夜支付平台会向您配置的 <code>notify_url</code> 发送异步通知，通知支付结果。您需要在 <code>notify.php</code> 中验证通知的合法性，并处理相应的业务逻辑。</p>
+    
+    <pre><code>// 验证异步通知
+$notify_result = validate_payment_notify($_POST);
+
+if ($notify_result['verified']) {
+    // 支付成功，更新订单状态
+    $order_no = $notify_result['out_trade_no'];
+    $trade_no = $notify_result['trade_no'];
+    $money = $notify_result['money'];
+    
+    // 处理业务逻辑...
+    
+    // 返回成功
+    echo 'success';
+}</code></pre>
+    
+    <h3>同步跳转处理</h3>
+    
+    <p>用户支付完成后会被跳转到您配置的 <code>return_url</code>，您可以在 <code>return.php</code> 中显示支付结果页面。</p>
+    
+    <h2>主要功能</h2>
+    
+    <ol>
+        <li><strong>多种支付方式</strong>：支持支付宝、微信支付、QQ钱包等多种支付方式</li>
+        <li><strong>用户自选支付方式</strong>：可以让用户自由选择支付方式</li>
+        <li><strong>自适应界面</strong>：自动适配PC端和移动端</li>
+        <li><strong>二维码生成</strong>：使用腾讯二维码生成API</li>
+        <li><strong>订单状态查询</strong>：支持查询订单支付状态</li>
+        <li><strong>回调验证</strong>：内置签名验证功能，确保支付通知的安全性</li>
+        <li><strong>日志记录</strong>：详细记录支付过程，方便排查问题</li>
+    </ol>
+    
+    <h2>新增特性</h2>
+    
+    <ol>
+        <li><strong>用户自选支付方式</strong>：如果不指定支付方式，系统会显示支付方式选择页面，让用户自由选择</li>
+        <li><strong>纯付款界面</strong>：用户无法修改支付参数，只能查看和支付</li>
+        <li><strong>参数验证优化</strong>：更严格的参数验证，避免错误</li>
+        <li><strong>错误处理优化</strong>：更友好的错误提示</li>
+        <li><strong>界面美化</strong>：更美观的支付界面</li>
+    </ol>
+    
+    <h2>注意事项</h2>
+    
+    <ol>
+        <li>请确保您的服务器能够被外网访问，否则无法接收异步通知</li>
+        <li>商户密钥等敏感信息应妥善保管，避免泄露</li>
+        <li>生产环境中建议使用HTTPS协议保证数据传输安全</li>
+        <li>异步通知处理应做好防重复处理的措施</li>
+    </ol>
+    
+    <h2>常见问题</h2>
+    
+    <ol>
+        <li>
+            <p><strong>支付后没有收到异步通知</strong></p>
+            <ul>
+                <li>检查异步通知地址是否正确</li>
+                <li>检查服务器是否能被外网访问</li>
+                <li>检查防火墙设置</li>
+                <li>检查 <code>notify.php</code> 是否有报错</li>
+            </ul>
+        </li>
+        <li>
+            <p><strong>签名验证失败</strong></p>
+            <ul>
+                <li>检查商户密钥是否正确</li>
+                <li>检查签名算法是否与文档一致</li>
+                <li>检查参数格式是否正确</li>
+            </ul>
+        </li>
+        <li>
+            <p><strong>二维码无法显示</strong></p>
+            <ul>
+                <li>确保网络可以访问腾讯二维码生成API</li>
+                <li>检查二维码内容是否正确</li>
+            </ul>
+        </li>
+    </ol>
+    
+    <h2>技术支持</h2>
+    
+    <p>如有任何问题，请联系平安夜技术支持或参考官方接口文档。</p>
+</body>
+</html> 

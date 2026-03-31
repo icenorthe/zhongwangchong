@@ -47,6 +47,15 @@ function providerQueryPath(env) {
   return normalizePath(env.XPAY_QUERY_PATH || env.PROVIDER_QUERY_PATH, "/xpay/epay/api.php");
 }
 
+function providerQueryMethod(env) {
+  const method = cleanEnvValue(env.XPAY_QUERY_METHOD || env.PROVIDER_QUERY_METHOD || "get").toLowerCase();
+  return method === "post" ? "post" : "get";
+}
+
+function providerQueryStyle(env) {
+  return cleanEnvValue(env.XPAY_QUERY_STYLE || env.PROVIDER_QUERY_STYLE || "").toLowerCase();
+}
+
 function providerSignMode(env) {
   const mode = cleanEnvValue(env.XPAY_SIGN_MODE || env.PROVIDER_SIGN_MODE || "concat").toLowerCase();
   return mode === "amp_key" ? "amp_key" : "concat";
@@ -610,6 +619,7 @@ async function createRechargeOrder(request, env) {
           out_trade_no: outTradeNo,
           pay_url:
             cleanProviderValue(providerJson.payurl) ||
+            cleanProviderValue(providerJson.h5_qrurl) ||
             (providerJson.trade_no ? `${providerBase(env)}/pay/${providerJson.trade_no}` : ""),
           qrcode: cleanProviderValue(providerJson.qrcode),
           urlscheme: cleanProviderValue(providerJson.urlscheme),
@@ -627,7 +637,10 @@ async function createRechargeOrder(request, env) {
     ok: true,
     recharge_request_id: rechargeRequest.id,
     out_trade_no: outTradeNo,
-    pay_url: cleanProviderValue(providerJson.payurl) || (providerJson.trade_no ? `${providerBase(env)}/pay/${providerJson.trade_no}` : ""),
+    pay_url:
+      cleanProviderValue(providerJson.payurl) ||
+      cleanProviderValue(providerJson.h5_qrurl) ||
+      (providerJson.trade_no ? `${providerBase(env)}/pay/${providerJson.trade_no}` : ""),
     qrcode: cleanProviderValue(providerJson.qrcode),
     urlscheme: cleanProviderValue(providerJson.urlscheme),
     provider: providerJson,
@@ -640,13 +653,30 @@ async function queryRechargeStatus(request, env) {
   if (!outTradeNo) {
     return json({ detail: "missing out_trade_no" }, 400);
   }
-  const providerUrl = new URL(`${providerBase(env)}${providerQueryPath(env)}`);
-  providerUrl.searchParams.set("act", "order");
-  providerUrl.searchParams.set("pid", providerPid(env));
-  providerUrl.searchParams.set("key", providerKey(env));
-  providerUrl.searchParams.set("out_trade_no", outTradeNo);
+  const queryPath = providerQueryPath(env);
+  const queryMethod = providerQueryMethod(env);
+  const queryStyle = providerQueryStyle(env);
+  let provider;
 
-  const provider = await requestJson(providerUrl.toString(), { method: "GET" });
+  if (queryMethod === "post" || queryStyle === "qjpay") {
+    const providerUrl = new URL(`${providerBase(env)}${queryPath}`);
+    const payload =
+      queryStyle === "qjpay"
+        ? { apiid: providerPid(env), apikey: providerKey(env), out_trade_no: outTradeNo }
+        : { pid: providerPid(env), key: providerKey(env), out_trade_no: outTradeNo };
+    provider = await requestJson(providerUrl.toString(), {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams(payload).toString(),
+    });
+  } else {
+    const providerUrl = new URL(`${providerBase(env)}${queryPath}`);
+    providerUrl.searchParams.set("act", "order");
+    providerUrl.searchParams.set("pid", providerPid(env));
+    providerUrl.searchParams.set("key", providerKey(env));
+    providerUrl.searchParams.set("out_trade_no", outTradeNo);
+    provider = await requestJson(providerUrl.toString(), { method: "GET" });
+  }
   const requestId = parseRequestId(outTradeNo);
   const paid = String(provider.status || "") === "1";
   if (paid && requestId) {

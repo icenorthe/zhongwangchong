@@ -2,7 +2,13 @@
   "base_url": "https://icenorth.pythonanywhere.com",
   "agent_name": "office-pc",
   "agent_token": "change-this-agent-token",
-  "poll_seconds": 5,
+  "poll_seconds": 10,
+  "push_socket_overview": "1",
+  "socket_overview_push_seconds": 90,
+  "local_bridge_url": "http://127.0.0.1:9000/api/start-charge",
+  "local_bridge_token": "local-bridge",
+  "push_consume_records": "1",
+  "consume_records_push_seconds": 120,
   "runner_command": "python services\\local_charge_runner.py",
   "runner_timeout_seconds": 120
 }
