@@ -37,6 +37,11 @@
     table{width:100%;border-collapse:collapse;min-width:1080px}
     th,td{border-bottom:1px solid var(--border);text-align:left;padding:10px 8px;font-size:14px;vertical-align:top}
     th{background:#f9fafb;font-size:13px;color:var(--muted);position:sticky;top:0}
+    .order-row-warning td{background:#fff7ed}
+    .order-row-timeout td{background:#fef2f2}
+    .processing-alert{display:block;margin-top:4px;font-size:12px;font-weight:700}
+    .processing-alert.warning{color:#b45309}
+    .processing-alert.timeout{color:#b91c1c}
     .status{font-weight:700;padding:2px 8px;border-radius:999px;display:inline-block;font-size:12px;border:1px solid var(--border)}
     .SUCCESS,.APPROVED{color:var(--ok);border-color:#86efac;background:#f0fdf4}
     .FAILED,.REJECTED{color:var(--fail);border-color:#fecaca;background:#fef2f2}
@@ -102,6 +107,8 @@
     .order-card .amount{font-size:14px;font-weight:800;color:#fff;background:#0f172a;padding:4px 10px;border-radius:999px}
     .order-card .badges{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
     .order-card .pill{border:1px solid #e2e8f0;background:#f8fafc;color:#334155;font-size:12px;border-radius:999px;padding:2px 8px;font-weight:600}
+    .order-card .pill.warning{background:#fff7ed;border-color:#fdba74;color:#9a3412}
+    .order-card .pill.timeout{background:#fef2f2;border-color:#fca5a5;color:#b91c1c}
     .meta-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:6px 10px;font-size:12px;color:#475569}
     .meta-item{display:flex;gap:6px;align-items:baseline}
     .meta-item .label{color:#94a3b8}
@@ -557,6 +564,8 @@
 
     function escapeHtml(value){return String(value??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;").replace(/'/g,"&#39;")}
     const fmt=(value)=>{if(!value)return"-";const d=new Date(value);return Number.isNaN(d.getTime())?String(value):d.toLocaleString()};
+    let processingTimeoutSeconds=60;
+    let processingWarningSeconds=45;
     function withToken(url){const u=new URL(url,window.location.origin);return u.pathname+u.search}
     function statusLabel(status){return ({SUCCESS:"成功",FAILED:"失败",PENDING:"待处理",PROCESSING:"处理中",APPROVED:"已通过",REJECTED:"已驳回"})[String(status||"").toUpperCase()]||String(status||"-")}
     function setAuthState(ready,message){adminReady=!!ready;if(loginButton)loginButton.disabled=adminReady;if(logoutButton)logoutButton.disabled=!adminReady;if(usernameInput)usernameInput.disabled=adminReady;if(passwordInput)passwordInput.disabled=adminReady;if(message)meta.textContent=message}
@@ -564,12 +573,19 @@
     const stationNoFromName=(name)=>Number((String(name||"").match(/(\\d+)号站/)||[])[1]||0)||0;
     function regionFromStationName(name){const text=String(name||"");if(text.includes("东盟"))return"东盟";if(text.includes("学术交流中心"))return"学术交流中心";if(text.includes("19栋"))return"19栋";if(text.includes("综合楼")||text.includes("图书馆"))return"综合楼";return"-"}
     function slotCode(order){const no=stationNoFromName(order?.station_name);const sid=Number(order?.socket_no||0)||0;const device=String(order?.device_code||"").trim();if(no>0&&sid>0)return `${no}-${sid}`;if(no>0)return String(no);if(device&&sid>0)return `${device}-${sid}`;if(sid>0)return `${sid}号`;return"-"}
-    function realtimeChargeText(order){const status=String(order?.status||"").toUpperCase();const charge=String(order?.charge_state||"").toUpperCase();const realtime=String(order?.realtime_status||"").trim();if(status==="FAILED")return"失败";if(charge.startsWith("ENDED"))return"已结束";if(realtime==="使用中")return"充电中";if(charge.startsWith("CHARGING"))return"充电中";if(realtime==="空闲")return"空闲";if(status==="PENDING")return"待处理";if(status==="PROCESSING")return"处理中";return realtime||"-"}
+    function realtimeChargeText(order){const status=String(order?.status||"").toUpperCase();const charge=String(order?.charge_state||"").toUpperCase();const realtime=String(order?.realtime_status||"").trim();if(status==="FAILED")return"失败";if(realtime==="使用中")return"充电中";if(charge.startsWith("CHARGING"))return"充电中";if(charge.startsWith("ENDED"))return"已结束";if(realtime==="空闲")return"空闲";if(status==="PENDING")return"待处理";if(status==="PROCESSING")return"处理中";return realtime||"-"}
     function chargeSlotLabel(order){const stationName=String(order?.station_name||"").trim();const sid=Number(order?.socket_no||0)||0;const device=String(order?.device_code||"").trim();if(stationName&&sid>0)return `${stationName}-${sid}号`;if(stationName)return stationName;if(device&&sid>0)return `${device}-${sid}号`;if(device)return device;if(sid>0)return `${sid}号`;return"-"}
     function endReasonText(order){const official=order?.official_detail||{};const reason=String(official.order_end_message||order?.charge_stop_reason||"").trim();return reason||"-"}
+    function processingAgeSeconds(order){if(String(order?.status||"").toUpperCase()!=="PROCESSING")return 0;const raw=String(order?.updated_at||order?.created_at||"").trim();if(!raw)return 0;const dt=new Date(raw);if(Number.isNaN(dt.getTime()))return 0;return Math.max(0,Math.floor((Date.now()-dt.getTime())/1000))}
+    function processingAlertLevel(order){if(String(order?.status||"").toUpperCase()!=="PROCESSING")return"";const age=processingAgeSeconds(order);if(age>=processingTimeoutSeconds)return"timeout";if(age>=processingWarningSeconds)return"warning";return""}
+    function processingAlertText(order){const level=processingAlertLevel(order);if(!level)return"";const age=processingAgeSeconds(order);if(level==="timeout")return `已超时 ${age-processingTimeoutSeconds} 秒`;return `距超时 ${Math.max(processingTimeoutSeconds-age,0)} 秒`}
+    function sortOrdersForAdmin(orders){return [...(orders||[])].sort((a,b)=>{const aStatus=String(a?.status||"").toUpperCase();const bStatus=String(b?.status||"").toUpperCase();const aProcessing=aStatus==="PROCESSING";const bProcessing=bStatus==="PROCESSING";if(aProcessing!==bProcessing)return aProcessing?-1:1;if(aProcessing&&bProcessing){const ageDiff=processingAgeSeconds(b)-processingAgeSeconds(a);if(ageDiff!==0)return ageDiff}const aLevel=processingAlertLevel(a);const bLevel=processingAlertLevel(b);const rank=(level)=>level==="timeout"?2:(level==="warning"?1:0);const rankDiff=rank(bLevel)-rank(aLevel);if(rankDiff!==0)return rankDiff;return Number(b?.id||0)-Number(a?.id||0)})}
+    function updateAdminMeta(stats,orders){const warningCount=(orders||[]).filter((o)=>processingAlertLevel(o)!=="").length;const processingCount=(orders||[]).filter((o)=>String(o?.status||"").toUpperCase()==="PROCESSING").length;const autoFailed=Number(stats?.auto_failed_processing||0)||0;const alertText=warningCount?` | 告警：${warningCount} 笔处理中订单接近超时`:"";const autoFailedText=autoFailed?` | 本轮自动转失败 ${autoFailed} 笔卡单`:"";meta.textContent=`网关模式：${stats?.gateway_mode||"-"} | 支付模式：${stats?.payment_mode||"-"} | 处理中：${processingCount} | 超时阈值：${processingTimeoutSeconds}s${alertText}${autoFailedText} | 最新刷新：${new Date().toLocaleString()}`}
 
-    function setStats(stats){document.getElementById("s_total").textContent=stats.total??0;document.getElementById("s_pending").textContent=stats.pending??0;document.getElementById("s_processing").textContent=stats.processing??0;document.getElementById("s_success").textContent=stats.success??0;document.getElementById("s_failed").textContent=stats.failed??0;document.getElementById("s_recharge_pending").textContent=stats.recharge_pending??0;document.getElementById("s_visit_count").textContent=stats.visit_count??0;document.getElementById("s_register_count").textContent=stats.register_count??0;document.getElementById("s_first_order_count").textContent=stats.first_order_count??0;document.getElementById("s_recharge_user_count").textContent=stats.recharge_user_count??0;document.getElementById("s_repeat_7d_count").textContent=stats.repeat_7d_count??0;meta.textContent=`网关模式：${stats.gateway_mode||"-"} | 支付模式：${stats.payment_mode||"-"} | 运营指标为累计值，7天复购指首单后 7 天内再次下单用户数 | 最新刷新：${new Date().toLocaleString()}`}
-    function renderOrders(orders){if(!orders.length){tbody.innerHTML='<tr><td colspan="11" class="muted">暂无订单</td></tr>';return}tbody.innerHTML=orders.map((o)=>{const slot=chargeSlotLabel(o);const realtime=realtimeChargeText(o);const endReason=endReasonText(o);const total=Number(o.total_cost_yuan||o.amount_yuan||0);return `<tr><td>${o.id}</td><td>${escapeHtml(o.phone||"-")}</td><td>${escapeHtml(slot)}</td><td>¥${total.toFixed(2)}</td><td><span class="status ${o.status}">${statusLabel(o.status)}</span></td><td>${escapeHtml(realtime)}</td><td>${escapeHtml(endReason)}</td><td>${escapeHtml(o.result_message||"-")}</td><td>${escapeHtml(o.vendor_order_id||"-")}</td><td>${escapeHtml(fmt(o.created_at))}</td><td>${String(o.status||"").toUpperCase()==="FAILED"?`<button class="secondary" onclick="retryOrder(${o.id})">重试</button>`:"-"}</td></tr>`}).join("")}
+    function setStats(stats){document.getElementById("s_total").textContent=stats.total??0;document.getElementById("s_pending").textContent=stats.pending??0;document.getElementById("s_processing").textContent=stats.processing??0;document.getElementById("s_success").textContent=stats.success??0;document.getElementById("s_failed").textContent=stats.failed??0;document.getElementById("s_recharge_pending").textContent=stats.recharge_pending??0;document.getElementById("s_visit_count").textContent=stats.visit_count??0;document.getElementById("s_register_count").textContent=stats.register_count??0;document.getElementById("s_first_order_count").textContent=stats.first_order_count??0;document.getElementById("s_recharge_user_count").textContent=stats.recharge_user_count??0;document.getElementById("s_repeat_7d_count").textContent=stats.repeat_7d_count??0;processingTimeoutSeconds=Math.max(30,Number(stats.processing_timeout_seconds||60));processingWarningSeconds=Math.max(15,processingTimeoutSeconds-15)}
+    function canRetryOrder(order){const status=String(order?.status||"").toUpperCase();return status==="FAILED"||status==="PROCESSING"}
+    function retryButtonHtml(order){return canRetryOrder(order)?`<button class="secondary" onclick="retryOrder(${order.id},'${String(order.status||"").toUpperCase()}')">重试</button>`:"-"}
+    function renderOrders(orders){if(!orders.length){tbody.innerHTML='<tr><td colspan="11" class="muted">暂无订单</td></tr>';return}tbody.innerHTML=orders.map((o)=>{const slot=chargeSlotLabel(o);const realtime=realtimeChargeText(o);const endReason=endReasonText(o);const total=Number(o.total_cost_yuan||o.amount_yuan||0);const level=processingAlertLevel(o);const alertText=processingAlertText(o);const rowClass=level?`order-row-${level}`:"";const resultHtml=`${escapeHtml(o.result_message||"-")}${alertText?`<span class="processing-alert ${level}">${escapeHtml(alertText)}</span>`:""}`;return `<tr class="${rowClass}"><td>${o.id}</td><td>${escapeHtml(o.phone||"-")}</td><td>${escapeHtml(slot)}</td><td>¥${total.toFixed(2)}</td><td><span class="status ${o.status}">${statusLabel(o.status)}</span></td><td>${escapeHtml(realtime)}</td><td>${escapeHtml(endReason)}</td><td>${resultHtml}</td><td>${escapeHtml(o.vendor_order_id||"-")}</td><td>${escapeHtml(fmt(o.created_at))}</td><td>${retryButtonHtml(o)}</td></tr>`}).join("")}
 
     function renderOrderCard(o,index,tone){
       const slot=chargeSlotLabel(o);
@@ -581,15 +597,20 @@
       const official=o.official_detail||{};
       const officialNo=String(official.cid||"").trim();
       const work=official.work_time_minutes!==null&&official.work_time_minutes!==undefined?Number(official.work_time_minutes):null;
-      const endTime=String(o.charge_finished_at||official.end_time||"").trim();
+      const endTime=String(official.end_time||o.charge_finished_at||"").trim();
+      const chargeState=String(o.charge_state||"").toUpperCase();
+      const realtimeRaw=String(o.realtime_status||"").trim();
+      const isChargingNow=realtimeRaw==="使用中"||chargeState.startsWith("CHARGING");
       const vendorNo=String(o.vendor_order_id||"").trim();
       const statusText=escapeHtml(statusLabel(o.status));
       const statusClass=escapeHtml(o.status);
       const statusUpper=String(o.status||"").toUpperCase();
       const cardTone=tone||(statusUpper==="SUCCESS"?"success":(statusUpper==="FAILED"?"failed":"pending"));
-      const endTimeValue=endTime?escapeHtml(fmt(endTime)):"-";
+      const endTimeValue=!isChargingNow&&endTime?escapeHtml(fmt(endTime)):"-";
       const workValue=(work!==null&&Number.isFinite(work))?`${work} 分钟`:"-";
       const resultValue=String(o.result_message||"-");
+      const processingLevel=processingAlertLevel(o);
+      const processingText=processingAlertText(o);
       const metaItems=[
         {label:"手机",value:phone},
         {label:"充电位",value:slot},
@@ -603,6 +624,7 @@
       ];
       if(officialNo)metaItems.push({label:"官方单号",value:officialNo});
       if(vendorNo)metaItems.push({label:"平台单号",value:vendorNo});
+      const actionRow=canRetryOrder(o)?`<div class="row" style="margin-top:10px"><button class="secondary" onclick="retryOrder(${o.id},'${statusUpper}')">重试订单</button></div>`:"";
       return `
         <article class="order-card ${cardTone}" style="--i:${Number(index||0)}">
           <div class="card-head">
@@ -616,10 +638,12 @@
             <span class="status ${statusClass}">${statusText}</span>
             <span class="pill">${escapeHtml(slot)}</span>
             <span class="pill">${escapeHtml(realtime)}</span>
+            ${processingText?`<span class="pill ${processingLevel}">${escapeHtml(processingText)}</span>`:""}
           </div>
           <div class="meta-grid">
             ${metaItems.map((item)=>`<div class="meta-item${item.full?" full":""}"><span class="label">${escapeHtml(item.label)}</span><span class="value">${escapeHtml(item.value)}</span></div>`).join("")}
           </div>
+          ${actionRow}
         </article>
       `.trim()
     }
@@ -631,12 +655,7 @@
         userOrdersWrap.innerHTML='<div class="muted">暂无订单</div>';
         return;
       }
-      const sorted=[...list].sort((a,b)=>{
-        const at=new Date(a.created_at||0).getTime();
-        const bt=new Date(b.created_at||0).getTime();
-        if(Number.isFinite(at)&&Number.isFinite(bt)&&bt!==at)return bt-at;
-        return Number(b.id||0)-Number(a.id||0);
-      });
+      const sorted=sortOrdersForAdmin(list);
       const success=sorted.filter((o)=>String(o.status||"").toUpperCase()==="SUCCESS");
       const failed=sorted.filter((o)=>String(o.status||"").toUpperCase()!=="SUCCESS");
       const totalAmount=sorted.reduce((sum,o)=>sum+Number(o.total_cost_yuan||o.amount_yuan||0),0);
@@ -715,13 +734,13 @@
       }).join("");
     }
     async function reviewRechargeRequest(id,approve){const reviewNote=window.prompt("审核说明（可选）")||"";const action=approve?"approve":"reject";await requestJson(`/api/admin/recharge-requests/${id}/${action}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({review_note:reviewNote})});await refreshAll()}
-    async function retryOrder(id){await requestJson(`/api/admin/orders/${id}/retry`,{method:"POST"});await refreshAll()}
+    async function retryOrder(id,status="FAILED"){const normalized=String(status||"").toUpperCase();const warning=normalized==="PROCESSING"?"该订单当前仍是处理中。只有在设备端明显卡死、长时间未回调时才应重试；否则可能造成重复下单。":"确认将该失败订单重新排队吗？";if(!window.confirm(`${warning}\n\n订单 #${id}`))return;await requestJson(`/api/admin/orders/${id}/retry`,{method:"POST"});await refreshAll()}
     async function reloadGateway(){await requestJson("/api/admin/reload-gateway",{method:"POST"});await refreshAll()}
     async function loginAdmin(){const username=usernameInput.value.trim();const password=passwordInput.value;const resp=await fetch("/api/admin/login",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({username,password})});const text=await resp.text();let data;try{data=text?JSON.parse(text):{}}catch{data={raw:text}}if(!resp.ok)throw new Error(data.detail||data.raw||`HTTP ${resp.status}`);setAuthState(true,`已登录后台：${data.username||username}`);await refreshAll()}
     async function logoutAdmin(){await fetch("/api/admin/logout",{method:"POST",credentials:"same-origin"});setAuthState(false,"已退出后台，请重新登录");passwordInput.value="";usernameInput.disabled=false;passwordInput.disabled=false}
     async function bootstrapAdmin(){try{const data=await requestJson("/api/admin/me");setAuthState(true,`已登录后台：${data.username||"-"}`);await refreshAll()}catch(err){setAuthState(false,"请先输入后台用户名和密码，再点击登录后台");tbody.innerHTML='<tr><td colspan="11" class="muted">请先登录后台</td></tr>';rechargeGroups.innerHTML="";userOrdersWrap.innerHTML=""}}
 
-    async function refreshAll(){if(!adminReady){meta.textContent="请先登录后台后再加载数据";return}if(refreshBusy)return;refreshBusy=true;try{const query=new URLSearchParams({limit:"200"});if(statusFilter.value.trim())query.set("status",statusFilter.value.trim());if(deviceCodeInput.value.trim())query.set("device_code",deviceCodeInput.value.trim());const rechargeQuery=new URLSearchParams({limit:"200"});if(rechargeStatusFilter.value.trim())rechargeQuery.set("status",rechargeStatusFilter.value.trim());const [stats,orders,recharges]=await Promise.all([requestJson("/api/admin/stats"),requestJson(`/api/orders?${query.toString()}`),requestJson(`/api/admin/recharge-requests?${rechargeQuery.toString()}`)]);lastOrders=Array.isArray(orders)?orders:[];setStats(stats);renderOrders(lastOrders);renderUserOrders(lastOrders);renderRechargeRequests(recharges)}catch(err){meta.textContent=`加载失败：${err.message}`}finally{refreshBusy=false}}
+    async function refreshAll(){if(!adminReady){meta.textContent="请先登录后台后再加载数据";return}if(refreshBusy)return;refreshBusy=true;try{const query=new URLSearchParams({limit:"200"});if(statusFilter.value.trim())query.set("status",statusFilter.value.trim());if(deviceCodeInput.value.trim())query.set("device_code",deviceCodeInput.value.trim());const rechargeQuery=new URLSearchParams({limit:"200"});if(rechargeStatusFilter.value.trim())rechargeQuery.set("status",rechargeStatusFilter.value.trim());const stats=await requestJson("/api/admin/stats");const [orders,recharges]=await Promise.all([requestJson(`/api/orders?${query.toString()}`),requestJson(`/api/admin/recharge-requests?${rechargeQuery.toString()}`)]);setStats(stats);lastOrders=sortOrdersForAdmin(Array.isArray(orders)?orders:[]);renderOrders(lastOrders);renderUserOrders(lastOrders);renderRechargeRequests(recharges);updateAdminMeta(stats,lastOrders)}catch(err){meta.textContent=`加载失败：${err.message}`}finally{refreshBusy=false}}
     window.retryOrder=retryOrder;window.reviewRechargeRequest=reviewRechargeRequest;
     loginButton.onclick=()=>loginAdmin().catch((e)=>setAuthState(false,`登录失败：${e.message}`));
     logoutButton.onclick=()=>logoutAdmin().catch((e)=>setAuthState(false,`退出失败：${e.message}`));

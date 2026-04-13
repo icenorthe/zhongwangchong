@@ -107,6 +107,12 @@ NO_LOAD_AUTO_REFUND_MESSAGE = os.getenv(
     "NO_LOAD_AUTO_REFUND_MESSAGE",
     "检测到插座空载自动结束，已自动退款。请确认插头已插牢后再下单。",
 ).strip()
+PROCESSING_TIMEOUT_SECONDS = max(30, int(os.getenv("PROCESSING_TIMEOUT_SECONDS", "60")))
+PROCESSING_TIMEOUT_SCAN_LIMIT = max(20, int(os.getenv("PROCESSING_TIMEOUT_SCAN_LIMIT", "200")))
+PROCESSING_TIMEOUT_MESSAGE = os.getenv(
+    "PROCESSING_TIMEOUT_MESSAGE",
+    "设备长时间未回传结果，订单已自动转为失败。请联系管理员核实。",
+).strip()
 ORDER_RECENT_SUBMIT_COOLDOWN_MINUTES = max(
     0, int(os.getenv("ORDER_RECENT_SUBMIT_COOLDOWN_MINUTES", "2"))
 )
@@ -148,6 +154,7 @@ RECHARGE_FREE_CHARGE_RULES = (
 )
 
 MINUTES_PER_YUAN = 207
+CHARGE_RESUME_HOUR = 7
 DEFAULT_RECHARGE_QR_NOTE = "请付款后提交充值申请，审核通过后更新余额。"
 MANUAL_PAYMENT_CONTACT = os.getenv("MANUAL_PAYMENT_CONTACT", "").strip()
 MANUAL_PAYMENT_INSTRUCTIONS = os.getenv("MANUAL_PAYMENT_INSTRUCTIONS", "").strip()
@@ -174,10 +181,11 @@ REALTIME_STATUS_SERIAL_RETRY_SECONDS = max(
 )
 OFFICIAL_MATCH_MAX_SECONDS = max(300, int(os.getenv("OFFICIAL_MATCH_MAX_SECONDS", "21600")))
 OFFICIAL_MATCH_MAX_PAST_SECONDS = max(0, int(os.getenv("OFFICIAL_MATCH_MAX_PAST_SECONDS", "1800")))
-OFFICIAL_HEURISTIC_MATCH_MAX_SECONDS = min(
-    OFFICIAL_MATCH_MAX_SECONDS if OFFICIAL_MATCH_MAX_SECONDS > 0 else 1200,
+OFFICIAL_HEURISTIC_MATCH_MAX_SECONDS = max(
     1200,
+    OFFICIAL_MATCH_MAX_SECONDS if OFFICIAL_MATCH_MAX_SECONDS > 0 else 1200,
 )
+USING_ORDER_MATCH_MAX_SECONDS = max(300, int(os.getenv("USING_ORDER_MATCH_MAX_SECONDS", "1800")))
 REGION_SORT_ORDER = {
     "综合楼": 1,
     "学术交流中心": 2,
@@ -597,7 +605,7 @@ def load_station_placeholders() -> list[dict[str, Any]]:
         return []
 
     placeholders: list[dict[str, Any]] = []
-    default_address = "四川省成都市龙泉驿区十陵街道成都大学"
+    default_address = "四川省成都市龙泉驿区十陵街道"
     for item in data:
         if not isinstance(item, dict):
             continue
@@ -652,6 +660,46 @@ def order_service_fee_yuan(amount_yuan: float, free_charge_used: int | bool = 0)
 
 def order_total_cost_yuan(amount_yuan: float, free_charge_used: int | bool = 0) -> float:
     return round(float(amount_yuan) + order_service_fee_yuan(amount_yuan, free_charge_used), 2)
+
+
+def build_order_settlement(
+    *,
+    amount_yuan: float,
+    free_charge_used: int | bool = 0,
+    status: str = "",
+    balance_refunded: int | bool = 0,
+    official_detail: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    total_cost = order_total_cost_yuan(amount_yuan, free_charge_used)
+    detail = official_detail or {}
+    normalized_status = str(status or "").strip().upper()
+    official_refund = round(max(float(detail.get("refund") or 0), 0.0), 2)
+    official_total_fee = round(max(float(detail.get("total_fee") or 0), 0.0), 2)
+    has_official_settlement = any(
+        key in detail and detail.get(key) not in (None, "")
+        for key in ("total_fee", "refund")
+    )
+
+    consumed_amount = 0.0
+    refund_amount = 0.0
+    actual_paid = 0.0
+    settlement_ready = False
+
+    if normalized_status == "FAILED" and int(balance_refunded or 0) == 1:
+        refund_amount = total_cost
+        settlement_ready = True
+    elif has_official_settlement:
+        consumed_amount = official_total_fee
+        refund_amount = official_refund
+        actual_paid = round(max(total_cost - official_refund, 0.0), 2)
+        settlement_ready = True
+
+    return {
+        "consumed_amount_yuan": consumed_amount,
+        "refund_amount_yuan": refund_amount,
+        "actual_paid_yuan": actual_paid,
+        "settlement_ready": settlement_ready,
+    }
 
 
 def recharge_bonus_free_charge_count(amount_yuan: float) -> int:
@@ -821,6 +869,82 @@ def build_official_detail(record: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def official_detail_end_markers(detail: dict[str, Any] | None) -> tuple[bool, str]:
+    payload = detail if isinstance(detail, dict) else {}
+    end_time = optional_text(payload.get("end_time"))
+    end_message = optional_text(payload.get("order_end_message"))
+    end_power = optional_int(payload.get("order_end_power"))
+    end_code = optional_int(payload.get("order_end_code"))
+    parsed_end_time = parse_official_datetime(end_time)
+    has_end_power = end_power not in (None, 0)
+    has_end_code = end_code not in (None, 0)
+    end_time_reached = bool(
+        parsed_end_time is not None and parsed_end_time <= datetime.now(UTC) + timedelta(seconds=30)
+    )
+    ended = bool(end_message) or (end_time_reached and (has_end_power or has_end_code))
+    return ended, end_time
+
+
+def load_latest_order_ids_for_socket_keys(
+    keys: set[tuple[str, int]] | list[tuple[str, int]] | tuple[tuple[str, int], ...],
+) -> dict[tuple[str, int], int]:
+    normalized = sorted(
+        {
+            (str(device_code).strip(), int(socket_no))
+            for device_code, socket_no in keys
+            if str(device_code).strip() and int(socket_no) > 0
+        }
+    )
+    if not normalized:
+        return {}
+    latest: dict[tuple[str, int], int] = {}
+    with db_connect() as conn:
+        for device_code, socket_no in normalized:
+            row = conn.execute(
+                """
+                SELECT id
+                FROM orders
+                WHERE device_code = ? AND socket_no = ?
+                ORDER BY id DESC
+                LIMIT 1
+                """,
+                (device_code, socket_no),
+            ).fetchone()
+            if row is not None:
+                latest[(device_code, socket_no)] = int(row["id"])
+    return latest
+
+
+def using_snapshot_matches_order(
+    order: dict[str, Any],
+    snapshot: dict[str, Any] | None,
+    *,
+    latest_order_id: int | None,
+) -> bool:
+    if not snapshot:
+        return False
+    order_id = int(order.get("id") or 0)
+    if order_id <= 0 or latest_order_id != order_id:
+        return False
+
+    start_time = parse_official_datetime(snapshot.get("start_time"))
+    if start_time is None:
+        return True
+
+    refs: list[datetime] = []
+    created_at = parse_iso(str(order.get("created_at") or ""))
+    if created_at is not None:
+        refs.append(created_at)
+    official_start = parse_official_datetime(get_nested_value(order, "official_detail.start_time", ""))
+    if official_start is not None:
+        refs.append(official_start)
+    if not refs:
+        return True
+
+    best_diff = min(abs((start_time - ref).total_seconds()) for ref in refs)
+    return best_diff <= USING_ORDER_MATCH_MAX_SECONDS
+
+
 def should_auto_refund_no_load(order_row: sqlite3.Row, official_detail: dict[str, Any]) -> bool:
     if not NO_LOAD_AUTO_REFUND_ENABLED:
         return False
@@ -900,7 +1024,29 @@ def estimated_finish_at(created_at: str, amount_yuan: float) -> str:
     started_at = parse_iso(created_at)
     if started_at is None:
         return ""
-    return (started_at + timedelta(minutes=approx_charge_minutes(amount_yuan))).isoformat()
+    if started_at.tzinfo is None:
+        started_at = started_at.replace(tzinfo=UTC)
+    return add_charge_runtime_minutes(started_at, approx_charge_minutes(amount_yuan)).astimezone(UTC).isoformat()
+
+
+def align_charge_runtime_start(started_at: datetime) -> datetime:
+    local_started_at = started_at.astimezone(OFFICIAL_TIMEZONE)
+    if local_started_at.hour >= CHARGE_RESUME_HOUR:
+        return local_started_at
+    return local_started_at.replace(hour=CHARGE_RESUME_HOUR, minute=0, second=0, microsecond=0)
+
+
+def add_charge_runtime_minutes(started_at: datetime, runtime_minutes: int | float) -> datetime:
+    current = align_charge_runtime_start(started_at)
+    remaining_seconds = max(float(runtime_minutes or 0), 0.0) * 60.0
+    while remaining_seconds > 0:
+        local_midnight = current.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
+        seconds_until_pause = max((local_midnight - current).total_seconds(), 0.0)
+        if remaining_seconds <= seconds_until_pause:
+            return current + timedelta(seconds=remaining_seconds)
+        remaining_seconds -= seconds_until_pause
+        current = local_midnight + timedelta(hours=CHARGE_RESUME_HOUR)
+    return current
 
 
 def charge_state_for_order(status: str, estimated_finish: str) -> tuple[str, str]:
@@ -911,8 +1057,6 @@ def charge_state_for_order(status: str, estimated_finish: str) -> tuple[str, str
         return normalized, ""
     finish_at = parse_iso(estimated_finish)
     if normalized == "SUCCESS" and finish_at is not None:
-        if datetime.now(UTC) >= finish_at:
-            return "ENDED_ESTIMATED", estimated_finish
         return "CHARGING_ESTIMATED", ""
     return normalized, ""
 
@@ -1249,6 +1393,24 @@ def configured_status_member_id() -> str:
     return optional_text(data.get("member_id"))
 
 
+def configured_official_record_member_ids() -> list[str]:
+    member_ids: list[str] = []
+    for value in (configured_charge_member_id(), configured_status_member_id()):
+        text = str(value or "").strip()
+        if text and text not in member_ids:
+            member_ids.append(text)
+    return member_ids
+
+
+def configured_realtime_using_member_ids() -> list[str]:
+    member_ids: list[str] = []
+    for value in (configured_status_member_id(), configured_charge_member_id()):
+        text = str(value or "").strip()
+        if text and text not in member_ids:
+            member_ids.append(text)
+    return member_ids
+
+
 def fetch_using_orders(member_id: str) -> tuple[dict[tuple[str, int], dict[str, Any]], str]:
     if not member_id:
         return {}, "配置缺少 member_id"
@@ -1297,6 +1459,42 @@ def fetch_using_orders(member_id: str) -> tuple[dict[tuple[str, int], dict[str, 
                 "remain_seconds": remain_seconds,
             }
     return using_orders, optional_text(payload.get("msg"))
+
+
+def merge_using_orders_for_member_ids(
+    member_ids: list[str] | tuple[str, ...],
+) -> tuple[dict[tuple[str, int], dict[str, Any]], str]:
+    ordered_ids: list[str] = []
+    for value in member_ids:
+        text = str(value or "").strip()
+        if text and text not in ordered_ids:
+            ordered_ids.append(text)
+    if not ordered_ids:
+        return {}, "配置缺少 member_id"
+
+    merged: dict[tuple[str, int], dict[str, Any]] = {}
+    errors: list[str] = []
+    success = False
+    for member_id in ordered_ids:
+        try:
+            using_orders, _ = fetch_using_orders(member_id)
+            success = True
+        except Exception as err:
+            message = format_realtime_error(err)
+            if message and message not in errors:
+                errors.append(message)
+            continue
+        for key, data in using_orders.items():
+            existing = merged.get(key)
+            if existing is None:
+                merged[key] = dict(data)
+                continue
+            for field, value in data.items():
+                if existing.get(field) in (None, "") and value not in (None, ""):
+                    existing[field] = value
+    if success:
+        return merged, ""
+    return merged, "；".join(errors)
 
 
 def fetch_consume_records(
@@ -1623,19 +1821,20 @@ def apply_consume_records_to_order_items(
             updated_row = refresh_order_item_from_db(int(item.get("id") or 0), items_by_id, row_by_id)
         current_item = items_by_id.get(int(item.get("id") or 0), item)
         current_item["official_detail"] = detail
-        ended_flag = bool(
-            detail.get("end_time")
-            or detail.get("order_end_message")
-            or detail.get("order_end_power") not in (None, "", 0)
-        )
-        if ended_flag and str(current_item.get("charge_state") or "").upper() in {
+        ended_flag, official_end_time = official_detail_end_markers(detail)
+        realtime_status = str(current_item.get("realtime_status") or "").strip()
+        realtime_active = realtime_status in {"使用中", "充电中"}
+        if realtime_active and str(current_item.get("status") or "").upper() == "SUCCESS":
+            current_item["charge_state"] = "CHARGING_LIVE"
+            current_item["charge_finished_at"] = ""
+        if not realtime_active and ended_flag and str(current_item.get("charge_state") or "").upper() in {
             "CHARGING_ESTIMATED",
             "CHARGING_LIVE",
             "PROCESSING",
         }:
             current_item["charge_state"] = "ENDED_LIVE"
-            parsed_end = parse_official_datetime(detail.get("end_time"))
-            current_item["charge_finished_at"] = parsed_end.isoformat() if parsed_end else now_iso()
+            parsed_end = parse_official_datetime(official_end_time)
+            current_item["charge_finished_at"] = parsed_end.isoformat() if parsed_end else ""
         if not current_item.get("charge_stop_reason") and detail.get("order_end_message"):
             current_item["charge_stop_reason"] = detail.get("order_end_message")
 
@@ -1659,8 +1858,17 @@ def apply_consume_records_to_order_items(
                     current_item["charge_stop_reason"] = "空载"
                 if failed_row is not None:
                     row_by_id[order_id] = failed_row
+                    order_row = failed_row
             except Exception:
                 pass
+        settlement = build_order_settlement(
+            amount_yuan=float(current_item.get("amount_yuan") or 0),
+            free_charge_used=int(current_item.get("free_charge_used") or 0),
+            status=str(current_item.get("status") or ""),
+            balance_refunded=int(order_row["balance_refunded"] or 0) if order_row is not None else 0,
+            official_detail=current_item.get("official_detail") or {},
+        )
+        current_item.update(settlement)
         items[index] = current_item
 
 
@@ -1682,18 +1890,25 @@ def attach_official_details_to_order_items(
     if not any(order_needs_official_refresh(item) for item in items):
         return ""
 
-    member_id = configured_status_member_id()
-    if not member_id:
+    member_ids = configured_official_record_member_ids()
+    if not member_ids:
         return "配置缺少 member_id" if not consume_records else ""
 
     try:
-        fresh_records, consume_message = fetch_consume_records_for_items(
-            member_id,
-            items,
-            page_size=min(100, max(50, limit)),
-        )
-        if fresh_records:
-            merged_records = merge_consume_records(consume_records, fresh_records)
+        merged_records = list(consume_records)
+        latest_message = ""
+        for member_id in member_ids:
+            fresh_records, current_message = fetch_consume_records_for_items(
+                member_id,
+                items,
+                page_size=min(100, max(50, limit)),
+            )
+            if current_message:
+                latest_message = current_message
+            if fresh_records:
+                merged_records = merge_consume_records(merged_records, fresh_records)
+        consume_message = latest_message
+        if merged_records:
             set_consume_record_snapshot(merged_records, now_iso())
             apply_consume_records_to_order_items(items, row_by_id, merged_records)
     except Exception as err:
@@ -1864,23 +2079,23 @@ def compute_live_socket_state_snapshot(region_key: str | None = None) -> list[di
             for station in stations
             if overview_region_key(station.get("region", "")) == selected_region_key
         ]
-    member_id = configured_status_member_id()
+    status_member_id = configured_status_member_id()
+    using_member_ids = configured_realtime_using_member_ids()
     using_orders: dict[tuple[str, int], dict[str, Any]] = {}
     using_orders_message = ""
     realtime_by_device: dict[str, dict[str, Any]] = {}
     serial_retry_candidates: list[dict[str, Any]] = []
 
-    if member_id:
-        try:
-            using_orders, using_orders_message = fetch_using_orders(member_id)
-        except Exception as err:
-            using_orders_message = format_realtime_error(err)
+    if using_member_ids:
+        using_orders, using_orders_message = merge_using_orders_for_member_ids(using_member_ids)
+    if status_member_id:
         realtime_candidates = [station for station in stations if optional_text(station.get("device_ck"))]
         if realtime_candidates:
             max_workers = min(REALTIME_STATUS_MAX_WORKERS, len(realtime_candidates))
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
                 future_to_station = {
-                    executor.submit(fetch_station_realtime, station, member_id): station for station in realtime_candidates
+                    executor.submit(fetch_station_realtime, station, status_member_id): station
+                    for station in realtime_candidates
                 }
                 for future in as_completed(future_to_station):
                     station = future_to_station[future]
@@ -1905,7 +2120,7 @@ def compute_live_socket_state_snapshot(region_key: str | None = None) -> list[di
                 for station in serial_retry_candidates[:REALTIME_STATUS_SERIAL_RETRY_LIMIT]:
                     device_code = str(station["device_code"])
                     try:
-                        result = fetch_station_realtime(station, member_id)
+                        result = fetch_station_realtime(station, status_member_id)
                         realtime_by_device[device_code] = result
                         cache_station_realtime(device_code, result)
                     except Exception:
@@ -1920,14 +2135,14 @@ def compute_live_socket_state_snapshot(region_key: str | None = None) -> list[di
         has_using_order = any(device_code == str(station["device_code"]) for device_code, _ in using_orders)
         station_result = realtime_by_device.get(str(station["device_code"]))
         if station_result is None:
-            if not member_id:
+            if not status_member_id:
                 station_result = {"ok": False, "message": "配置缺少 member_id", "products": []}
             elif not optional_text(station.get("device_code")):
                 station_result = {"ok": False, "message": "仅录入站号，缺少 device_code / device_ck", "products": []}
             elif optional_text(station.get("device_ck")):
                 station_result = {"ok": False, "message": "实时接口未返回结果", "products": []}
             elif has_using_order:
-                station_result = {"ok": False, "message": "缺少 device_ck；仅能识别当前账号充电中的插座", "products": []}
+                station_result = {"ok": False, "message": "缺少 device_ck；仅能识别已配置账号充电中的插座", "products": []}
             else:
                 station_result = {"ok": False, "message": "缺少 device_ck", "products": []}
         sockets, query_message = build_station_sockets(station, station_result, using_orders)
@@ -1948,14 +2163,11 @@ def compute_live_socket_state_snapshot(region_key: str | None = None) -> list[di
 def build_realtime_snapshot_for_orders(
     rows: list[sqlite3.Row],
 ) -> tuple[dict[tuple[str, int], dict[str, Any]], dict[str, dict[str, Any]], str]:
-    member_id = configured_status_member_id()
-    if not member_id or not rows:
-        return {}, {}, "配置缺少 member_id" if not member_id else ""
+    if not rows:
+        return {}, {}, ""
 
-    try:
-        using_orders, using_orders_message = fetch_using_orders(member_id)
-    except Exception as err:
-        using_orders, using_orders_message = {}, format_realtime_error(err)
+    status_member_id = configured_status_member_id()
+    using_orders, using_orders_message = merge_using_orders_for_member_ids(configured_realtime_using_member_ids())
 
     station_by_code = {
         str(station.get("device_code") or ""): station for station in load_stations() if station.get("device_code")
@@ -1965,18 +2177,22 @@ def build_realtime_snapshot_for_orders(
         for row in rows
         if str(row["device_code"] or "").strip()
     }
+    realtime_by_device = build_realtime_by_device_from_agent_snapshot(device_codes)
     candidates = [
         station_by_code[code]
         for code in device_codes
-        if code in station_by_code and optional_text(station_by_code[code].get("device_ck"))
+        if (
+            code in station_by_code
+            and code not in realtime_by_device
+            and optional_text(station_by_code[code].get("device_ck"))
+        )
     ]
 
-    realtime_by_device: dict[str, dict[str, Any]] = {}
-    if candidates:
+    if candidates and status_member_id:
         max_workers = min(REALTIME_STATUS_MAX_WORKERS, len(candidates))
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             future_to_station = {
-                executor.submit(fetch_station_realtime, station, member_id): station
+                executor.submit(fetch_station_realtime, station, status_member_id): station
                 for station in candidates
             }
             for future in as_completed(future_to_station):
@@ -2000,6 +2216,62 @@ def build_realtime_snapshot_for_orders(
     return using_orders, realtime_by_device, using_orders_message
 
 
+def socket_snapshot_state(status: Any) -> int | None:
+    normalized = str(status or "").strip()
+    if normalized == "空闲":
+        return 0
+    if normalized in {"使用中", "充电中"}:
+        return 1
+    return None
+
+
+def build_realtime_by_device_from_agent_snapshot(device_codes: set[str]) -> dict[str, dict[str, Any]]:
+    if not device_codes:
+        return {}
+    allow_stale = ALLOW_STALE_AGENT_SNAPSHOT or PREFER_AGENT_SNAPSHOT
+    snapshot = latest_agent_socket_overview(allow_stale=allow_stale)
+    if not snapshot:
+        return {}
+    realtime_by_device: dict[str, dict[str, Any]] = {}
+    for region in snapshot:
+        if not isinstance(region, dict):
+            continue
+        stations = region.get("stations")
+        if not isinstance(stations, list):
+            continue
+        for station in stations:
+            if not isinstance(station, dict):
+                continue
+            device_code = str(station.get("device_code") or "").strip()
+            if not device_code or device_code not in device_codes:
+                continue
+            sockets = station.get("sockets")
+            products: list[dict[str, Any]] = []
+            if isinstance(sockets, list):
+                for socket in sockets:
+                    if not isinstance(socket, dict):
+                        continue
+                    sid = optional_int(socket.get("socket_no"))
+                    state = socket_snapshot_state(socket.get("status"))
+                    if sid is None or sid <= 0 or state is None:
+                        continue
+                    product: dict[str, Any] = {"sid": sid, "state": state}
+                    remain_seconds = socket.get("remain_seconds")
+                    end_time = socket.get("end_time")
+                    if remain_seconds not in (None, ""):
+                        product["remain_seconds"] = remain_seconds
+                    if end_time not in (None, ""):
+                        product["end_time"] = end_time
+                    products.append(product)
+            realtime_by_device[device_code] = {
+                "ok": bool(station.get("realtime_ok", True)),
+                "message": optional_text(station.get("query_message")),
+                "products": products,
+                "source": "agent_socket_overview",
+            }
+    return realtime_by_device
+
+
 def apply_realtime_status_for_orders(
     items: list[dict[str, Any]],
     using_orders: dict[tuple[str, int], dict[str, Any]],
@@ -2012,9 +2284,17 @@ def apply_realtime_status_for_orders(
     station_by_code = {
         str(station.get("device_code") or ""): station for station in load_stations() if station.get("device_code")
     }
+    latest_order_id_by_socket = load_latest_order_ids_for_socket_keys(
+        {
+            (str(item.get("device_code") or "").strip(), int(optional_int(item.get("socket_no")) or 0))
+            for item in items
+            if str(item.get("device_code") or "").strip() and optional_int(item.get("socket_no"))
+        }
+    )
     for item in items:
         status = str(item.get("status") or "").upper()
         charge_state = str(item.get("charge_state") or "").upper()
+        charge_finished_at = optional_text(item.get("charge_finished_at"))
         device_code = str(item.get("device_code") or "").strip()
         socket_no = optional_int(item.get("socket_no"))
         item.setdefault("realtime_status", "")
@@ -2022,7 +2302,7 @@ def apply_realtime_status_for_orders(
         item.setdefault("realtime_source", "")
         item.setdefault("realtime_ok", False)
         item.setdefault("realtime_message", "")
-        if status == "FAILED" or (charge_state.startswith("ENDED") and charge_state != "ENDED_ESTIMATED"):
+        if status == "FAILED" or (charge_state.startswith("ENDED") and charge_finished_at):
             item["realtime_status"] = ""
             item["realtime_detail"] = ""
             item["realtime_source"] = ""
@@ -2032,24 +2312,30 @@ def apply_realtime_status_for_orders(
         if not device_code or socket_no is None or socket_no <= 0:
             continue
         key = (device_code, socket_no)
-        if key in using_orders:
-            detail = format_using_order_detail(using_orders[key])
-            item["realtime_status"] = "使用中"
-            item["realtime_detail"] = detail
-            item["realtime_source"] = "using_orders"
-            item["realtime_ok"] = True
-            item["realtime_message"] = ""
-            if str(item.get("status", "")).upper() == "SUCCESS":
-                item["charge_state"] = "CHARGING_LIVE"
-                item["charge_finished_at"] = ""
-            if str(item.get("status", "")).upper() == "FAILED":
-                item["result_message"] = "当前插座正在使用中，请更换插座后重试"
-            continue
-
+        latest_order_id = latest_order_id_by_socket.get(key)
+        using_snapshot = using_orders.get(key)
+        matched_using_snapshot = using_snapshot_matches_order(item, using_snapshot, latest_order_id=latest_order_id)
         station_result = realtime_by_device.get(device_code)
         if station_result is None:
             if using_orders_message and not suppress_realtime_message:
                 item["realtime_message"] = using_orders_message
+            if matched_using_snapshot:
+                detail = format_using_order_detail(using_snapshot)
+                item["realtime_status"] = "使用中"
+                item["realtime_detail"] = detail
+                item["realtime_source"] = "using_orders"
+                item["realtime_ok"] = True
+                item["realtime_message"] = ""
+                if str(item.get("status", "")).upper() == "SUCCESS" and charge_state in {
+                    "CHARGING_ESTIMATED",
+                    "CHARGING_LIVE",
+                    "PENDING",
+                    "PROCESSING",
+                }:
+                    item["charge_state"] = "CHARGING_LIVE"
+                    item["charge_finished_at"] = ""
+                if str(item.get("status", "")).upper() == "FAILED":
+                    item["result_message"] = "当前插座正在使用中，请更换插座后重试"
             continue
         station = station_by_code.get(device_code) or {"device_code": device_code}
         products = station_result.get("products")
@@ -2063,7 +2349,16 @@ def apply_realtime_status_for_orders(
                     break
         if product is not None:
             status_data = socket_status_from_product(station, socket_no, product, using_orders)
-            item["realtime_status"] = status_data.get("status", "")
+            live_status = str(status_data.get("status") or "")
+            can_bind_live_status = latest_order_id == int(item.get("id") or 0)
+            if live_status == "使用中" and not can_bind_live_status:
+                item["realtime_status"] = ""
+                item["realtime_detail"] = ""
+                item["realtime_source"] = ""
+                item["realtime_ok"] = False
+                item["realtime_message"] = ""
+                continue
+            item["realtime_status"] = live_status
             item["realtime_detail"] = optional_text(status_data.get("detail"))
             item["realtime_source"] = "station_realtime"
             item["realtime_ok"] = bool(station_result.get("ok"))
@@ -2073,17 +2368,41 @@ def apply_realtime_status_for_orders(
             if not item.get("charge_stop_reason"):
                 item["charge_stop_reason"] = charge_stop_reason_from_text(item["realtime_detail"])
             if str(item.get("status", "")).upper() == "SUCCESS" and item["realtime_status"] == "使用中":
-                item["charge_state"] = "CHARGING_LIVE"
-                item["charge_finished_at"] = ""
+                if charge_state in {
+                    "CHARGING_ESTIMATED",
+                    "CHARGING_LIVE",
+                    "PENDING",
+                    "PROCESSING",
+                } and (matched_using_snapshot or can_bind_live_status):
+                    item["charge_state"] = "CHARGING_LIVE"
+                    item["charge_finished_at"] = ""
             if str(item.get("status", "")).upper() == "FAILED" and item["realtime_status"] == "使用中":
                 item["result_message"] = "当前插座正在使用中，请更换插座后重试"
             if (
                 str(item.get("status", "")).upper() == "SUCCESS"
-                and item.get("charge_state") in {"CHARGING_ESTIMATED", "CHARGING_LIVE", "ENDED_ESTIMATED"}
+                and charge_state in {"CHARGING_ESTIMATED", "CHARGING_LIVE"}
                 and item["realtime_status"] == "空闲"
             ):
                 item["charge_state"] = "ENDED_LIVE"
-                item["charge_finished_at"] = now_iso()
+                item["charge_finished_at"] = charge_finished_at
+            continue
+        if matched_using_snapshot:
+            detail = format_using_order_detail(using_snapshot)
+            item["realtime_status"] = "使用中"
+            item["realtime_detail"] = detail
+            item["realtime_source"] = "using_orders"
+            item["realtime_ok"] = True
+            item["realtime_message"] = ""
+            if str(item.get("status", "")).upper() == "SUCCESS" and charge_state in {
+                "CHARGING_ESTIMATED",
+                "CHARGING_LIVE",
+                "PENDING",
+                "PROCESSING",
+            }:
+                item["charge_state"] = "CHARGING_LIVE"
+                item["charge_finished_at"] = ""
+            if str(item.get("status", "")).upper() == "FAILED":
+                item["result_message"] = "当前插座正在使用中，请更换插座后重试"
             continue
         detail = "实时接口未返回该插座" if station_result.get("ok") else optional_text(station_result.get("message"))
         item["realtime_status"] = "未查询到"
@@ -2357,8 +2676,23 @@ def row_to_dict(row: sqlite3.Row) -> dict[str, Any]:
         official_detail = {}
     if official_order_id and not str(official_detail.get("cid") or "").strip():
         official_detail["cid"] = official_order_id
+    settlement = build_order_settlement(
+        amount_yuan=amount_yuan,
+        free_charge_used=free_charge_used,
+        status=str(row["status"] or ""),
+        balance_refunded=int(row["balance_refunded"] or 0) if "balance_refunded" in row.keys() else 0,
+        official_detail=official_detail,
+    )
     estimated_finish = estimated_finish_at(created_at, amount_yuan)
     charge_state, charge_finished_at = charge_state_for_order(str(row["status"] or ""), estimated_finish)
+    official_ended, official_end_time = official_detail_end_markers(official_detail)
+    if official_ended:
+        charge_state = "ENDED_LIVE"
+        parsed_official_end = parse_official_datetime(official_end_time)
+        if parsed_official_end is not None:
+            charge_finished_at = parsed_official_end.isoformat()
+        elif official_end_time:
+            charge_finished_at = official_end_time
     return {
         "id": row["id"],
         "user_id": row["user_id"],
@@ -2381,6 +2715,10 @@ def row_to_dict(row: sqlite3.Row) -> dict[str, Any]:
         "free_charge_used": free_charge_used,
         "service_fee_yuan": order_service_fee_yuan(amount_yuan, free_charge_used),
         "total_cost_yuan": order_total_cost_yuan(amount_yuan, free_charge_used),
+        "consumed_amount_yuan": settlement["consumed_amount_yuan"],
+        "refund_amount_yuan": settlement["refund_amount_yuan"],
+        "actual_paid_yuan": settlement["actual_paid_yuan"],
+        "settlement_ready": settlement["settlement_ready"],
         "official_order_id": official_order_id,
         "official_detail": official_detail,
         "official_detail_updated_at": (
@@ -2421,6 +2759,10 @@ class OrderView(BaseModel):
     free_charge_used: int = 0
     service_fee_yuan: float = 0
     total_cost_yuan: float = 0
+    consumed_amount_yuan: float = 0
+    refund_amount_yuan: float = 0
+    actual_paid_yuan: float = 0
+    settlement_ready: bool = False
     realtime_status: str = ""
     realtime_detail: str = ""
     realtime_source: str = ""
@@ -3009,6 +3351,37 @@ def claim_next_pending_order() -> sqlite3.Row | None:
             return None
 
         return conn.execute("SELECT * FROM orders WHERE id = ?", (row["id"],)).fetchone()
+
+
+def expire_timed_out_processing_orders(*, limit: int = PROCESSING_TIMEOUT_SCAN_LIMIT) -> int:
+    now = datetime.now(UTC)
+    timed_out_ids: list[int] = []
+    with db_connect() as conn:
+        rows = conn.execute(
+            """
+            SELECT id, created_at, updated_at
+            FROM orders
+            WHERE status = 'PROCESSING'
+            ORDER BY updated_at ASC, id ASC
+            LIMIT ?
+            """,
+            (int(limit),),
+        ).fetchall()
+    for row in rows:
+        started_at = parse_iso(str(row["updated_at"] or row["created_at"] or ""))
+        if started_at is None:
+            continue
+        if (now - started_at).total_seconds() >= PROCESSING_TIMEOUT_SECONDS:
+            timed_out_ids.append(int(row["id"]))
+
+    expired = 0
+    for order_id in timed_out_ids:
+        try:
+            update_order_result(order_id, "FAILED", PROCESSING_TIMEOUT_MESSAGE)
+            expired += 1
+        except Exception:
+            continue
+    return expired
 
 
 def apply_balance_delta(
@@ -3854,13 +4227,12 @@ def agent_consume_records(payload: AgentConsumeRecordsPayload) -> dict[str, Any]
 
 @app.get("/api/realtime/using-orders", dependencies=[Depends(require_user)])
 def realtime_using_orders() -> dict[str, Any]:
-    member_id = configured_status_member_id()
-    if not member_id:
+    member_ids = configured_realtime_using_member_ids()
+    if not member_ids:
         return {"ok": False, "message": "配置缺少 member_id", "items": []}
-    try:
-        using_orders, using_orders_message = fetch_using_orders(member_id)
-    except Exception as err:
-        return {"ok": False, "message": format_realtime_error(err), "items": []}
+    using_orders, using_orders_message = merge_using_orders_for_member_ids(member_ids)
+    if using_orders_message:
+        return {"ok": False, "message": using_orders_message, "items": []}
 
     items: list[dict[str, Any]] = []
     for (device_code, socket_no), data in using_orders.items():
@@ -3886,14 +4258,12 @@ def realtime_station_check(
     socket_count: int = Query(default=10, ge=1, le=20),
     station_name: str | None = Query(default="", max_length=120),
 ) -> dict[str, Any]:
-    member_id = configured_status_member_id()
+    status_member_id = configured_status_member_id()
     using_orders: dict[tuple[str, int], dict[str, Any]] = {}
     using_orders_message = ""
-    if member_id:
-        try:
-            using_orders, using_orders_message = fetch_using_orders(member_id)
-        except Exception as err:
-            using_orders_message = format_realtime_error(err)
+    using_member_ids = configured_realtime_using_member_ids()
+    if using_member_ids:
+        using_orders, using_orders_message = merge_using_orders_for_member_ids(using_member_ids)
 
     station = {
         "device_code": device_code,
@@ -3904,15 +4274,15 @@ def realtime_station_check(
 
     if station["device_ck"]:
         try:
-            station_result = fetch_station_realtime(station, member_id or "")
+            station_result = fetch_station_realtime(station, status_member_id or "")
         except Exception as err:
             station_result = {"ok": False, "message": format_realtime_error(err), "products": []}
     else:
         has_using_order = any(code == str(device_code) for code, _ in using_orders)
-        if not member_id:
+        if not status_member_id:
             message = "配置缺少 member_id"
         elif has_using_order:
-            message = "缺少 device_ck；仅能识别当前账号充电中的插座"
+            message = "缺少 device_ck；仅能识别已配置账号充电中的插座"
         else:
             message = "缺少 device_ck"
         station_result = {"ok": False, "message": message, "products": []}
@@ -4047,6 +4417,7 @@ def my_orders(
     limit: int = Query(default=50, ge=1, le=200),
     user: sqlite3.Row = Depends(require_user),
 ) -> list[OrderView]:
+    expire_timed_out_processing_orders()
     with db_connect() as conn:
         rows = conn.execute(
             "SELECT * FROM orders WHERE user_id = ? ORDER BY id DESC LIMIT ?",
@@ -4431,6 +4802,7 @@ def create_order(payload: OrderCreate, user: sqlite3.Row = Depends(require_user)
 
 @app.get("/api/orders/{order_id}", response_model=OrderView)
 def get_order(order_id: int, user: sqlite3.Row = Depends(require_user)) -> OrderView:
+    expire_timed_out_processing_orders()
     with db_connect() as conn:
         row = conn.execute("SELECT * FROM orders WHERE id = ?", (order_id,)).fetchone()
     if row is None:
@@ -4446,6 +4818,7 @@ def list_orders(
     status: str | None = Query(default=None),
     device_code: str | None = Query(default=None),
 ) -> list[OrderView]:
+    expire_timed_out_processing_orders()
     clauses: list[str] = []
     params: list[Any] = []
 
@@ -4839,6 +5212,7 @@ def metrics_repeat_within_days(conn: sqlite3.Connection, days: int = 7) -> int:
 
 @app.get("/api/admin/stats", dependencies=[Depends(require_admin)])
 def admin_stats() -> dict[str, Any]:
+    auto_failed_processing = expire_timed_out_processing_orders()
     with db_connect() as conn:
         total = conn.execute("SELECT COUNT(*) FROM orders").fetchone()[0]
         pending = conn.execute("SELECT COUNT(*) FROM orders WHERE status = 'PENDING'").fetchone()[0]
@@ -4875,6 +5249,8 @@ def admin_stats() -> dict[str, Any]:
         "first_order_count": first_order_count,
         "recharge_user_count": recharge_user_count,
         "repeat_7d_count": repeat_7d_count,
+        "processing_timeout_seconds": PROCESSING_TIMEOUT_SECONDS,
+        "auto_failed_processing": auto_failed_processing,
         **get_service_status(),
     }
 
@@ -4920,6 +5296,8 @@ def retry_order(order_id: int) -> dict[str, Any]:
                 raise HTTPException(status_code=404, detail="order not found")
 
             previous_status = str(row["status"] or "").strip().upper()
+            if previous_status not in {"FAILED", "PROCESSING"}:
+                raise HTTPException(status_code=409, detail="only FAILED or PROCESSING orders can be retried")
             free_charge_used = int(row["free_charge_used"] or 0)
             amount_yuan = float(row["amount_yuan"] or 0)
             payment_mode = str(row["payment_mode"] or "").strip().lower()

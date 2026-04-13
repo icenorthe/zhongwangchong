@@ -113,6 +113,11 @@
       position: sticky;
       top: 0;
     }
+    .order-row-warning td { background: #fff7ed; }
+    .order-row-timeout td { background: #fef2f2; }
+    .processing-alert { display: block; margin-top: 4px; font-size: 12px; font-weight: 700; }
+    .processing-alert.warning { color: #b45309; }
+    .processing-alert.timeout { color: #b91c1c; }
     .status {
       font-weight: 700;
       padding: 2px 8px;
@@ -239,14 +244,19 @@
       return "-";
     }
 
+    function canRetryOrder(order) {
+      const status = String(order?.status || "").toUpperCase();
+      return status === "FAILED" || status === "PROCESSING";
+    }
+
     function renderOrders(orders) {
       if (!orders.length) {
         tbody.innerHTML = `<tr><td colspan="10" class="muted">暂无订单</td></tr>`;
         return;
       }
       tbody.innerHTML = orders.map((o) => {
-        const retryBtn = o.status === "FAILED"
-          ? `<button class="secondary" onclick="retryOrder(${o.id})">重试</button>`
+        const retryBtn = canRetryOrder(o)
+          ? `<button class="secondary" onclick="retryOrder(${o.id}, '${String(o.status || "").toUpperCase()}')">重试</button>`
           : "-";
         return `
           <tr>
@@ -284,8 +294,13 @@
       }
     }
 
-    async function retryOrder(orderId) {
+    async function retryOrder(orderId, status = "FAILED") {
       try {
+        const normalized = String(status || "").toUpperCase();
+        const warning = normalized === "PROCESSING"
+          ? "该订单当前仍是处理中。只有在设备端明显卡死、长时间未回调时才应重试；否则可能造成重复下单。"
+          : "确认将该失败订单重新排队吗？";
+        if (!window.confirm(`${warning}\n\n订单 #${orderId}`)) return;
         await requestJson(`/api/admin/orders/${orderId}/retry`, { method: "POST" });
         await refreshAll();
       } catch (err) {

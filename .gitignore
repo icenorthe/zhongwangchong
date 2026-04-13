@@ -25,6 +25,7 @@ Desktop.ini
 
 # Logs & runtime artifacts
 *.log
+runtime/
 runtime/**/logs/
 runtime/**/tmp/
 runtime/**/cache/
@@ -57,3 +58,25 @@ tuple\[*
 .aider*
 deploy/cloudflare_payment_bridge/.wrangler/
 Motrix-64-1.8.19.exe
+
+# Frontend scratch variants
+assets/web/mobile_order copy.html
+assets/web/*.backup-*.html
+assets/web/*.broken-*.html
+assets/web/*.variant-*.html
+
+# Local backups
+config/*.bak
+services/*.bak
+
+# Unrelated personal files kept locally only
+/202510811201伊星儒实践作业2.docx
+/202510811201伊星儒实践作业2_修复版.docx
+/WiFi-24.30.1-Driver64-Win10-Win11 (1).exe
+/《实验报告》模板.doc
+/实践作业2.docx
+/家庭经济困难学生学费减免ISP操作教程-学生版.pdf
+/家庭经济困难学生学费减免ISP操作教程-教师版.pdf
+/计算机学院2025-2026学年五四评选表彰拟推荐名单.xlsx
+/附件1：成都大学家庭经济困难学生学费减免实施办法（修订）成大学【39】号） (1).pdf
+/附件1：成都大学家庭经济困难学生学费减免实施办法（修订）成大学【39】号）.pdf

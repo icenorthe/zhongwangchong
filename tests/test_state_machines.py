@@ -121,6 +121,30 @@ def expected_order_total(module, amount_yuan: float, *, free_charge_used: int = 
     return float(module.order_total_cost_yuan(amount_yuan, free_charge_used))
 
 
+def test_estimated_finish_at_keeps_same_day_when_not_crossing_pause(server):
+    module, _client = server
+    local_start = module.datetime(2026, 4, 2, 18, 0, tzinfo=module.OFFICIAL_TIMEZONE)
+
+    estimated_finish = module.parse_iso(module.estimated_finish_at(local_start.astimezone(module.UTC).isoformat(), 1.0))
+
+    assert estimated_finish is not None
+    assert estimated_finish.astimezone(module.OFFICIAL_TIMEZONE) == module.datetime(
+        2026, 4, 2, 21, 27, tzinfo=module.OFFICIAL_TIMEZONE
+    )
+
+
+def test_estimated_finish_at_skips_overnight_pause_window(server):
+    module, _client = server
+    local_start = module.datetime(2026, 4, 2, 22, 30, tzinfo=module.OFFICIAL_TIMEZONE)
+
+    estimated_finish = module.parse_iso(module.estimated_finish_at(local_start.astimezone(module.UTC).isoformat(), 1.0))
+
+    assert estimated_finish is not None
+    assert estimated_finish.astimezone(module.OFFICIAL_TIMEZONE) == module.datetime(
+        2026, 4, 3, 8, 57, tzinfo=module.OFFICIAL_TIMEZONE
+    )
+
+
 def test_order_success_reserves_balance_up_front(server):
     module, client = server
     user_id, token = register_user(client, "13800000001")
@@ -167,6 +191,79 @@ def test_order_failure_refunds_reserved_balance(server):
     assert str(order["status"]) == "FAILED"
     assert int(order["balance_deducted"]) == 1
     assert int(order["balance_refunded"]) == 1
+    assert float(user["balance_yuan"]) == pytest.approx(2.0)
+
+
+def test_admin_can_retry_processing_order(server):
+    module, client = server
+    user_id, token = register_user(client, "13800000013")
+    set_wallet(module, user_id, balance_yuan=2.0, free_charge_count=0)
+
+    response = create_order(client, token, device_code="dev-13")
+    assert response.status_code == 200, response.text
+    order_id = int(response.json()["id"])
+
+    with module.db_connect() as conn:
+        conn.execute(
+            "UPDATE orders SET status = 'PROCESSING', result_message = '设备执行指令出错', updated_at = ? WHERE id = ?",
+            (module.now_iso(), order_id),
+        )
+        conn.commit()
+
+    retried = client.post(f"/api/admin/orders/{order_id}/retry", headers=admin_headers())
+    assert retried.status_code == 200, retried.text
+
+    order = fetch_order(module, order_id)
+    assert str(order["status"]) == "PENDING"
+    assert str(order["result_message"] or "") == ""
+
+
+def test_admin_retry_rejects_success_order(server):
+    module, client = server
+    user_id, token = register_user(client, "13800000014")
+    set_wallet(module, user_id, balance_yuan=2.0, free_charge_count=0)
+
+    response = create_order(client, token, device_code="dev-14")
+    assert response.status_code == 200, response.text
+    order_id = int(response.json()["id"])
+
+    complete = client.post(
+        f"/api/agent/orders/{order_id}/complete",
+        headers=agent_headers(),
+        json={"success": True, "message": "ok", "vendor_order_id": "vendor-14"},
+    )
+    assert complete.status_code == 200, complete.text
+
+    retried = client.post(f"/api/admin/orders/{order_id}/retry", headers=admin_headers())
+    assert retried.status_code == 409, retried.text
+
+
+def test_admin_stats_auto_fails_timed_out_processing_order(server):
+    module, client = server
+    user_id, token = register_user(client, "13800000015")
+    set_wallet(module, user_id, balance_yuan=2.0, free_charge_count=0)
+
+    response = create_order(client, token, device_code="dev-15")
+    assert response.status_code == 200, response.text
+    order_id = int(response.json()["id"])
+
+    timed_out_at = (module.datetime.now(module.UTC) - module.timedelta(seconds=module.PROCESSING_TIMEOUT_SECONDS + 5)).isoformat()
+    with module.db_connect() as conn:
+        conn.execute(
+            "UPDATE orders SET status = 'PROCESSING', result_message = '', updated_at = ? WHERE id = ?",
+            (timed_out_at, order_id),
+        )
+        conn.commit()
+
+    stats = client.get("/api/admin/stats", headers=admin_headers())
+    assert stats.status_code == 200, stats.text
+    assert int(stats.json()["auto_failed_processing"] or 0) >= 1
+
+    order = fetch_order(module, order_id)
+    user = fetch_user(module, user_id)
+    assert str(order["status"]) == "FAILED"
+    assert str(order["result_message"]) == module.PROCESSING_TIMEOUT_MESSAGE
+    assert int(order["balance_refunded"] or 0) == 1
     assert float(user["balance_yuan"]) == pytest.approx(2.0)
 
 
@@ -239,6 +336,31 @@ def test_build_official_detail_preserves_unknown_stop_reason(server):
 
     assert detail["order_end_message"] == "设备离线自动结束"
     assert detail["order_end_code"] == 99
+
+
+def test_build_consume_match_candidate_allows_delayed_official_start(server):
+    module, _client = server
+    order = {
+        "id": 17,
+        "device_code": "15071177319",
+        "socket_no": 9,
+        "amount_yuan": 3.0,
+        "created_at": "2026-04-02T11:41:01.916359+00:00",
+    }
+    record = {
+        "cid": "1507117731909020526040220071473",
+        "sn": "15071177319",
+        "sid": 9,
+        "startTime": "2026-04-02 20:07:17",
+        "endTime": "2026-04-03 08:32:45",
+        "totalFee": 1.57,
+        "refund": 1.43,
+    }
+
+    candidate = module.build_consume_match_candidate(order, record)
+
+    assert candidate is not None
+    assert candidate["cid"] == "1507117731909020526040220071473"
 
 
 def test_manual_recharge_reject_path_keeps_balance_unchanged(server):
@@ -439,6 +561,121 @@ def test_my_orders_reconciles_processing_order_from_consume_record(server):
     assert str(order["status"]) == "SUCCESS"
     assert order["official_detail"]["cid"] == "official-1001"
     assert order["charge_state"] == "ENDED_LIVE"
+    assert float(order["consumed_amount_yuan"]) == pytest.approx(1.0)
+    assert float(order["refund_amount_yuan"]) == pytest.approx(0.0)
+    assert float(order["actual_paid_yuan"]) == pytest.approx(1.5)
+    assert bool(order["settlement_ready"]) is True
+
+
+def test_my_orders_keeps_charging_when_consume_record_only_has_live_end_time(server):
+    module, client = server
+    user_id, token = register_user(client, "13800000012")
+    set_wallet(module, user_id, balance_yuan=2.0, free_charge_count=0)
+
+    created = create_order(client, token, device_code="dev-12", amount_yuan=1.0)
+    assert created.status_code == 200, created.text
+    order_id = int(created.json()["id"])
+
+    complete = client.post(
+        f"/api/agent/orders/{order_id}/complete",
+        headers=agent_headers(),
+        json={"success": True, "message": "ok", "vendor_order_id": "vendor-12"},
+    )
+    assert complete.status_code == 200, complete.text
+
+    created_at = module.parse_iso(str(fetch_order(module, order_id)["created_at"]))
+    assert created_at is not None
+    official_created_at = created_at.astimezone(module.OFFICIAL_TIMEZONE)
+
+    module.set_consume_record_snapshot(
+        [
+            {
+                "cid": "official-live-12",
+                "sn": "dev-12",
+                "sid": 1,
+                "startTime": official_created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                "endTime": (official_created_at + module.timedelta(minutes=90)).strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                ),
+                "workTime": 15,
+                "totalFee": 0.3,
+                "refund": 0.7,
+                "payWay": "wxpay",
+                "orderEndMessage": "",
+                "orderEndCode": 0,
+                "orderEndPower": 0,
+            }
+        ],
+        module.now_iso(),
+    )
+    module.build_realtime_snapshot_for_orders = lambda rows: ({}, {}, "")
+
+    response = client.get("/api/me/orders?limit=20", headers=auth_headers(token))
+    assert response.status_code == 200, response.text
+    order = response.json()[0]
+
+    assert order["official_detail"]["cid"] == "official-live-12"
+    assert order["official_detail"]["end_time"] != ""
+    assert order["charge_state"] == "CHARGING_ESTIMATED"
+    assert order["charge_finished_at"] == ""
+
+
+def test_my_orders_keeps_charging_when_consume_record_has_ambiguous_end_markers(server):
+    module, client = server
+    user_id, token = register_user(client, "13800000025")
+    set_wallet(module, user_id, balance_yuan=2.0, free_charge_count=0)
+
+    created = create_order(client, token, device_code="dev-25", amount_yuan=1.0)
+    assert created.status_code == 200, created.text
+    order_id = int(created.json()["id"])
+
+    complete = client.post(
+        f"/api/agent/orders/{order_id}/complete",
+        headers=agent_headers(),
+        json={"success": True, "message": "ok", "vendor_order_id": "vendor-25"},
+    )
+    assert complete.status_code == 200, complete.text
+
+    created_at = module.parse_iso(str(fetch_order(module, order_id)["created_at"]))
+    assert created_at is not None
+    official_created_at = created_at.astimezone(module.OFFICIAL_TIMEZONE)
+
+    module.set_consume_record_snapshot(
+        [
+            {
+                "cid": "official-live-25",
+                "sn": "dev-25",
+                "sid": 1,
+                "startTime": official_created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                "endTime": "",
+                "workTime": 18,
+                "totalFee": 0.36,
+                "refund": 0.64,
+                "payWay": "wxpay",
+                "orderEndMessage": "",
+                "orderEndCode": 14,
+                "orderEndPower": 280,
+            }
+        ],
+        module.now_iso(),
+    )
+    module.build_realtime_snapshot_for_orders = lambda rows: ({}, {}, "")
+
+    first = client.get("/api/me/orders?limit=20", headers=auth_headers(token))
+    second = client.get("/api/me/orders?limit=20", headers=auth_headers(token))
+    assert first.status_code == 200, first.text
+    assert second.status_code == 200, second.text
+
+    first_order = first.json()[0]
+    second_order = second.json()[0]
+
+    assert first_order["official_detail"]["cid"] == "official-live-25"
+    assert first_order["official_detail"]["order_end_code"] == 14
+    assert first_order["official_detail"]["order_end_power"] == 280
+    assert first_order["charge_state"] == "CHARGING_ESTIMATED"
+    assert first_order["charge_finished_at"] == ""
+    assert second_order["charge_state"] == "CHARGING_ESTIMATED"
+    assert second_order["charge_finished_at"] == ""
 
 
 def test_my_orders_keeps_persisted_official_detail_without_live_snapshot(server):
@@ -496,6 +733,533 @@ def test_my_orders_keeps_persisted_official_detail_without_live_snapshot(server)
 
     assert order["official_detail"]["cid"] == "official-keep-13"
     assert order["official_detail"]["pay_way"] == "wxpay"
+
+
+def test_my_orders_preserves_official_end_time_for_finished_history_order(server):
+    module, client = server
+    user_a_id, token_a = register_user(client, "13800000020")
+    user_b_id, token_b = register_user(client, "13800000021")
+    set_wallet(module, user_a_id, balance_yuan=5.0, free_charge_count=0)
+    set_wallet(module, user_b_id, balance_yuan=5.0, free_charge_count=0)
+
+    created_a = create_order(client, token_a, device_code="dev-20-a", amount_yuan=1.0)
+    assert created_a.status_code == 200, created_a.text
+    order_a_id = int(created_a.json()["id"])
+
+    created_b = create_order(client, token_b, device_code="dev-20-b", amount_yuan=1.0)
+    assert created_b.status_code == 200, created_b.text
+
+    official_detail = {
+        "cid": "official-keep-20",
+        "device_code": "dev-20-a",
+        "station_name": "test-station",
+        "socket_no": 1,
+        "start_time": "2026-04-02 08:00:00",
+        "end_time": "2026-04-02 10:15:00",
+        "work_time_minutes": 135,
+        "refund": 0.0,
+        "total_fee": 1.0,
+        "pay_way": "wxpay",
+        "order_end_message": "达到预定时长",
+        "order_end_code": 1,
+        "order_end_power": 0,
+    }
+    created_at = module.datetime(2026, 4, 2, 8, 0, tzinfo=module.UTC).isoformat()
+    with module.db_connect() as conn:
+        conn.execute(
+            """
+            UPDATE orders
+            SET status = 'SUCCESS',
+                created_at = ?,
+                updated_at = ?,
+                official_order_id = ?,
+                official_detail_json = ?,
+                official_detail_updated_at = ?
+            WHERE id = ?
+            """,
+            (
+                created_at,
+                module.now_iso(),
+                "official-keep-20",
+                module.json.dumps(official_detail, ensure_ascii=False),
+                module.now_iso(),
+                order_a_id,
+            ),
+        )
+        conn.commit()
+
+    module.build_realtime_snapshot_for_orders = lambda rows: (
+        {
+            ("dev-20-a", 1): {
+                "start_time": "2026-04-06 09:00:00",
+                "end_time": "2026-04-06 12:00:00",
+                "remain_seconds": 3600,
+            },
+            ("dev-20-b", 1): {
+                "start_time": "2026-04-06 09:00:00",
+                "end_time": "2026-04-06 12:00:00",
+                "remain_seconds": 3600,
+            },
+        },
+        {},
+        "",
+    )
+    module.set_consume_record_snapshot([], "")
+
+    response = client.get("/api/me/orders?limit=20", headers=auth_headers(token_a))
+    assert response.status_code == 200, response.text
+    order = response.json()[0]
+
+    expected_end = module.parse_official_datetime("2026-04-02 10:15:00")
+    assert expected_end is not None
+    assert order["official_detail"]["cid"] == "official-keep-20"
+    assert order["charge_state"] == "ENDED_LIVE"
+    assert order["charge_finished_at"] == expected_end.isoformat()
+    assert order["realtime_status"] == ""
+
+
+def test_my_orders_prefers_station_realtime_over_stale_using_order_snapshot(server):
+    module, client = server
+    user_id, token = register_user(client, "13800000016")
+    set_wallet(module, user_id, balance_yuan=2.0, free_charge_count=0)
+
+    created = create_order(client, token, device_code="dev-16", amount_yuan=1.0)
+    assert created.status_code == 200, created.text
+    order_id = int(created.json()["id"])
+
+    complete = client.post(
+        f"/api/agent/orders/{order_id}/complete",
+        headers=agent_headers(),
+        json={"success": True, "message": "ok", "vendor_order_id": "vendor-16"},
+    )
+    assert complete.status_code == 200, complete.text
+
+    module.set_consume_record_snapshot([], "")
+    module.build_realtime_snapshot_for_orders = lambda rows: (
+        {
+            ("dev-16", 1): {
+                "start_time": "2026-04-03 07:00:00",
+                "end_time": "2026-04-03 10:00:00",
+                "remain_seconds": 3600,
+            }
+        },
+        {
+            "dev-16": {
+                "ok": True,
+                "message": "",
+                "products": [{"sid": 1, "state": 0}],
+            }
+        },
+        "",
+    )
+
+    response = client.get("/api/me/orders?limit=20", headers=auth_headers(token))
+    assert response.status_code == 200, response.text
+    order = response.json()[0]
+
+    assert order["realtime_status"] == "空闲"
+    assert order["realtime_source"] == "station_realtime"
+    assert order["charge_state"] == "ENDED_LIVE"
+    assert order["charge_finished_at"] == ""
+
+
+def test_my_orders_uses_agent_socket_overview_when_live_realtime_is_unavailable(server):
+    module, client = server
+    user_id, token = register_user(client, "13800000017")
+    set_wallet(module, user_id, balance_yuan=2.0, free_charge_count=0)
+
+    created = create_order(client, token, device_code="dev-17", amount_yuan=1.0)
+    assert created.status_code == 200, created.text
+    order_id = int(created.json()["id"])
+
+    complete = client.post(
+        f"/api/agent/orders/{order_id}/complete",
+        headers=agent_headers(),
+        json={"success": True, "message": "ok", "vendor_order_id": "vendor-17"},
+    )
+    assert complete.status_code == 200, complete.text
+
+    module.PREFER_AGENT_SNAPSHOT = True
+    module.ALLOW_STALE_AGENT_SNAPSHOT = True
+    module.load_stations = lambda: [
+        {
+            "id": "station-17",
+            "name": "test-station",
+            "region": "test-region",
+            "device_code": "dev-17",
+            "device_ck": "test-ck",
+            "socket_count": 10,
+            "disabled_sockets": [],
+        }
+    ]
+    module.latest_agent_socket_overview = lambda allow_stale=False: [
+        {
+            "region": "test-region",
+            "stations": [
+                {
+                    "device_code": "dev-17",
+                    "realtime_ok": True,
+                    "query_message": "",
+                    "sockets": [{"socket_no": 1, "status": "空闲", "detail": ""}],
+                }
+            ],
+        }
+    ]
+    module.fetch_using_orders = lambda member_id: (
+        {
+            ("dev-17", 1): {
+                "start_time": "2026-04-03 07:00:00",
+                "end_time": "2026-04-03 10:00:00",
+                "remain_seconds": 3600,
+            }
+        },
+        "",
+    )
+
+    def fail_fetch_station_realtime(*_args, **_kwargs):
+        raise AssertionError("live realtime should not be queried when agent snapshot exists")
+
+    module.fetch_station_realtime = fail_fetch_station_realtime
+    module.set_consume_record_snapshot([], "")
+
+    response = client.get("/api/me/orders?limit=20", headers=auth_headers(token))
+    assert response.status_code == 200, response.text
+    order = response.json()[0]
+
+    assert order["realtime_status"] == "空闲"
+    assert order["charge_state"] == "ENDED_LIVE"
+    assert order["charge_finished_at"] == ""
+
+
+def test_my_orders_keeps_order_charging_when_socket_is_busy_but_using_snapshot_misses(server):
+    module, client = server
+    user_id, token = register_user(client, "13800000018")
+    set_wallet(module, user_id, balance_yuan=2.0, free_charge_count=0)
+
+    created = create_order(client, token, device_code="dev-18", amount_yuan=1.0)
+    assert created.status_code == 200, created.text
+    order_id = int(created.json()["id"])
+
+    complete = client.post(
+        f"/api/agent/orders/{order_id}/complete",
+        headers=agent_headers(),
+        json={"success": True, "message": "ok", "vendor_order_id": "vendor-18"},
+    )
+    assert complete.status_code == 200, complete.text
+
+    module.PREFER_AGENT_SNAPSHOT = True
+    module.ALLOW_STALE_AGENT_SNAPSHOT = True
+    module.load_stations = lambda: [
+        {
+            "id": "station-18",
+            "name": "test-station",
+            "region": "test-region",
+            "device_code": "dev-18",
+            "device_ck": "test-ck",
+            "socket_count": 10,
+            "disabled_sockets": [],
+        }
+    ]
+    module.latest_agent_socket_overview = lambda allow_stale=False: [
+        {
+            "region": "test-region",
+            "stations": [
+                {
+                    "device_code": "dev-18",
+                    "realtime_ok": True,
+                    "query_message": "",
+                    "sockets": [{"socket_no": 1, "status": "充电中", "detail": ""}],
+                }
+            ],
+        }
+    ]
+    module.fetch_using_orders = lambda member_id: ({}, "")
+    module.fetch_station_realtime = lambda *_args, **_kwargs: (_ for _ in ()).throw(
+        AssertionError("live realtime should not be queried when agent snapshot exists")
+    )
+    module.set_consume_record_snapshot([], "")
+
+    response = client.get("/api/me/orders?limit=20", headers=auth_headers(token))
+    assert response.status_code == 200, response.text
+    order = response.json()[0]
+
+    assert order["realtime_status"] == "使用中"
+    assert order["charge_state"] == "CHARGING_LIVE"
+    assert order["charge_finished_at"] == ""
+
+
+def test_admin_orders_does_not_tick_end_time_for_active_busy_order_without_using_snapshot(server):
+    module, client = server
+    user_id, token = register_user(client, "13800000022")
+    set_wallet(module, user_id, balance_yuan=2.0, free_charge_count=0)
+
+    created = create_order(client, token, device_code="dev-22", amount_yuan=1.0)
+    assert created.status_code == 200, created.text
+    order_id = int(created.json()["id"])
+
+    complete = client.post(
+        f"/api/agent/orders/{order_id}/complete",
+        headers=agent_headers(),
+        json={"success": True, "message": "ok", "vendor_order_id": "vendor-22"},
+    )
+    assert complete.status_code == 200, complete.text
+
+    module.PREFER_AGENT_SNAPSHOT = True
+    module.ALLOW_STALE_AGENT_SNAPSHOT = True
+    module.load_stations = lambda: [
+        {
+            "id": "station-22",
+            "name": "test-station",
+            "region": "test-region",
+            "device_code": "dev-22",
+            "device_ck": "test-ck",
+            "socket_count": 10,
+            "disabled_sockets": [],
+        }
+    ]
+    module.latest_agent_socket_overview = lambda allow_stale=False: [
+        {
+            "region": "test-region",
+            "stations": [
+                {
+                    "device_code": "dev-22",
+                    "realtime_ok": True,
+                    "query_message": "",
+                    "sockets": [{"socket_no": 1, "status": "充电中", "detail": ""}],
+                }
+            ],
+        }
+    ]
+    module.fetch_using_orders = lambda member_id: ({}, "")
+    module.fetch_station_realtime = lambda *_args, **_kwargs: (_ for _ in ()).throw(
+        AssertionError("live realtime should not be queried when agent snapshot exists")
+    )
+    module.set_consume_record_snapshot([], "")
+
+    response = client.get("/api/orders?limit=20", headers=admin_headers())
+    assert response.status_code == 200, response.text
+    order = response.json()[0]
+
+    assert order["id"] == order_id
+    assert order["realtime_status"] == "使用中"
+    assert order["charge_state"] == "CHARGING_LIVE"
+    assert order["charge_finished_at"] == ""
+
+
+def test_shared_member_id_does_not_leak_latest_busy_status_across_accounts(server):
+    module, client = server
+    user_a_id, token_a = register_user(client, "13800000023")
+    user_b_id, token_b = register_user(client, "13800000024")
+    set_wallet(module, user_a_id, balance_yuan=5.0, free_charge_count=0)
+    set_wallet(module, user_b_id, balance_yuan=5.0, free_charge_count=0)
+
+    first = create_order(client, token_a, device_code="dev-23", amount_yuan=1.0)
+    second = create_order(client, token_b, device_code="dev-23", amount_yuan=1.0)
+    assert first.status_code == 200, first.text
+    assert second.status_code == 200, second.text
+    first_order_id = int(first.json()["id"])
+    second_order_id = int(second.json()["id"])
+
+    with module.db_connect() as conn:
+        conn.execute(
+            "UPDATE orders SET status = 'SUCCESS', updated_at = ? WHERE id IN (?, ?)",
+            (module.now_iso(), first_order_id, second_order_id),
+        )
+        conn.commit()
+
+    base = module.datetime(2026, 4, 6, 9, 0, tzinfo=module.UTC)
+    first_created_at = (base - module.timedelta(hours=2)).isoformat()
+    second_created_at = base.isoformat()
+    with module.db_connect() as conn:
+        conn.execute("UPDATE orders SET created_at = ?, updated_at = ? WHERE id = ?", (first_created_at, first_created_at, first_order_id))
+        conn.execute("UPDATE orders SET created_at = ?, updated_at = ? WHERE id = ?", (second_created_at, second_created_at, second_order_id))
+        conn.commit()
+
+    module.PREFER_AGENT_SNAPSHOT = True
+    module.ALLOW_STALE_AGENT_SNAPSHOT = True
+    module.load_stations = lambda: [
+        {
+            "id": "station-23",
+            "name": "test-station",
+            "region": "test-region",
+            "device_code": "dev-23",
+            "device_ck": "test-ck",
+            "socket_count": 10,
+            "disabled_sockets": [],
+        }
+    ]
+    module.latest_agent_socket_overview = lambda allow_stale=False: [
+        {
+            "region": "test-region",
+            "stations": [
+                {
+                    "device_code": "dev-23",
+                    "realtime_ok": True,
+                    "query_message": "",
+                    "sockets": [{"socket_no": 1, "status": "充电中", "detail": ""}],
+                }
+            ],
+        }
+    ]
+    module.fetch_using_orders = lambda member_id: (
+        {
+            ("dev-23", 1): {
+                "start_time": "2026-04-06 17:00:00",
+                "end_time": "2026-04-06 20:00:00",
+                "remain_seconds": 3600,
+            }
+        },
+        "",
+    )
+    module.fetch_station_realtime = lambda *_args, **_kwargs: (_ for _ in ()).throw(
+        AssertionError("live realtime should not be queried when agent snapshot exists")
+    )
+    module.set_consume_record_snapshot([], "")
+
+    response_a = client.get("/api/me/orders?limit=20", headers=auth_headers(token_a))
+    response_b = client.get("/api/me/orders?limit=20", headers=auth_headers(token_b))
+    assert response_a.status_code == 200, response_a.text
+    assert response_b.status_code == 200, response_b.text
+
+    order_a = response_a.json()[0]
+    order_b = response_b.json()[0]
+
+    assert order_a["id"] == first_order_id
+    assert order_a["realtime_status"] == ""
+    assert order_a["charge_state"] == "CHARGING_ESTIMATED"
+    assert order_b["id"] == second_order_id
+    assert order_b["realtime_status"] == "使用中"
+    assert order_b["charge_state"] == "CHARGING_LIVE"
+    assert order_b["charge_finished_at"] == ""
+
+
+def test_order_lists_merge_using_orders_across_charge_and_status_member_ids(server):
+    module, client = server
+    user_id, token = register_user(client, "13800000020")
+    set_wallet(module, user_id, balance_yuan=2.0, free_charge_count=0)
+
+    created = create_order(client, token, device_code="dev-20", amount_yuan=1.0)
+    assert created.status_code == 200, created.text
+    order_id = int(created.json()["id"])
+
+    complete = client.post(
+        f"/api/agent/orders/{order_id}/complete",
+        headers=agent_headers(),
+        json={"success": True, "message": "ok", "vendor_order_id": "vendor-20"},
+    )
+    assert complete.status_code == 200, complete.text
+
+    module.configured_status_member_id = lambda: "status-member"
+    module.configured_charge_member_id = lambda: "charge-member"
+    module.load_stations = lambda: [
+        {
+            "id": "station-20",
+            "name": "test-station",
+            "region": "test-region",
+            "device_code": "dev-20",
+            "device_ck": "test-ck",
+            "socket_count": 10,
+            "disabled_sockets": [],
+        }
+    ]
+    requested_member_ids: list[str] = []
+
+    def fake_fetch_using_orders(member_id: str):
+        requested_member_ids.append(member_id)
+        if member_id == "status-member":
+            return {}, ""
+        if member_id == "charge-member":
+            return {
+                ("dev-20", 1): {
+                    "status": "using",
+                    "detail": "",
+                    "station_name": "test-station",
+                    "start_time": "2026-04-03 07:00:00",
+                    "end_time": "2026-04-03 10:00:00",
+                    "remain_seconds": 3600,
+                }
+            }, ""
+        raise AssertionError(f"unexpected member id: {member_id}")
+
+    module.fetch_using_orders = fake_fetch_using_orders
+    module.build_realtime_by_device_from_agent_snapshot = lambda _device_codes: {
+        "dev-20": {
+            "ok": True,
+            "message": "",
+            "products": [{"sid": 1, "state": 1}],
+        }
+    }
+    module.set_consume_record_snapshot([], "")
+
+    admin_response = client.get("/api/orders?limit=20", headers=admin_headers())
+    assert admin_response.status_code == 200, admin_response.text
+    user_response = client.get("/api/me/orders?limit=20", headers=auth_headers(token))
+    assert user_response.status_code == 200, user_response.text
+
+    for payload in (admin_response.json()[0], user_response.json()[0]):
+        assert payload["realtime_status"] == "\u4f7f\u7528\u4e2d"
+        assert payload["charge_state"] == "CHARGING_LIVE"
+        assert payload["charge_finished_at"] == ""
+
+    assert "status-member" in requested_member_ids
+    assert "charge-member" in requested_member_ids
+
+
+def test_my_orders_loads_official_detail_from_charge_member_id_when_status_member_id_misses(server):
+    module, client = server
+    user_id, token = register_user(client, "13800000019")
+    set_wallet(module, user_id, balance_yuan=5.0, free_charge_count=0)
+
+    created = create_order(client, token, device_code="dev-19", amount_yuan=3.0)
+    assert created.status_code == 200, created.text
+    order_id = int(created.json()["id"])
+
+    with module.db_connect() as conn:
+        conn.execute(
+            "UPDATE orders SET status = 'SUCCESS', result_message = '支付成功', vendor_order_id = ?, updated_at = ? WHERE id = ?",
+            ("api-19", module.now_iso(), order_id),
+        )
+        conn.commit()
+
+    created_at = module.parse_iso(str(fetch_order(module, order_id)["created_at"]))
+    assert created_at is not None
+    official_created_at = created_at.astimezone(module.OFFICIAL_TIMEZONE)
+
+    charge_member_records = [
+        {
+            "cid": "official-19",
+            "sn": "dev-19",
+            "sid": 1,
+            "startTime": official_created_at.strftime("%Y-%m-%d %H:%M:%S"),
+            "endTime": (official_created_at + module.timedelta(minutes=325)).strftime("%Y-%m-%d %H:%M:%S"),
+            "workTime": 325,
+            "totalFee": 1.57,
+            "refund": 1.43,
+            "payWay": "余额支付",
+            "orderEndMessage": "充电中断",
+            "orderEndCode": 14,
+            "orderEndPower": 0,
+        }
+    ]
+
+    def fake_fetch_consume_records_for_items(member_id, items, **kwargs):
+        if member_id == "charge-member":
+            return charge_member_records, "获取成功"
+        return [], "获取成功"
+
+    module.fetch_consume_records_for_items = fake_fetch_consume_records_for_items
+    module.configured_official_record_member_ids = lambda: ["charge-member", "status-member"]
+    module.build_realtime_snapshot_for_orders = lambda rows: ({}, {}, "")
+    module.set_consume_record_snapshot([], "")
+
+    response = client.get("/api/me/orders?limit=20", headers=auth_headers(token))
+    assert response.status_code == 200, response.text
+    order = response.json()[0]
+
+    assert order["official_detail"]["cid"] == "official-19"
+    assert order["official_detail"]["total_fee"] == pytest.approx(1.57)
+    assert order["official_detail"]["refund"] == pytest.approx(1.43)
+    assert order["charge_state"] == "ENDED_LIVE"
 
 
 def test_my_orders_avoids_binding_same_official_record_to_wrong_order(server):
@@ -610,6 +1374,10 @@ def test_my_orders_auto_refunds_no_load_processing_order_from_consume_record(ser
     assert float(user["balance_yuan"]) == pytest.approx(2.0)
     assert str(order["status"]) == "FAILED"
     assert order["result_message"] == module.NO_LOAD_AUTO_REFUND_MESSAGE
+    assert float(order["consumed_amount_yuan"]) == pytest.approx(0.0)
+    assert float(order["refund_amount_yuan"]) == pytest.approx(1.5)
+    assert float(order["actual_paid_yuan"]) == pytest.approx(0.0)
+    assert bool(order["settlement_ready"]) is True
 
 
 def test_my_orders_auto_refunds_no_load_and_returns_free_charge_count(server):
@@ -670,3 +1438,7 @@ def test_my_orders_auto_refunds_no_load_and_returns_free_charge_count(server):
     assert int(order["free_charge_used"] or 0) == 1
     assert float(order["service_fee_yuan"]) == pytest.approx(0.0)
     assert order["result_message"] == module.NO_LOAD_AUTO_REFUND_MESSAGE
+    assert float(order["consumed_amount_yuan"]) == pytest.approx(0.0)
+    assert float(order["refund_amount_yuan"]) == pytest.approx(1.0)
+    assert float(order["actual_paid_yuan"]) == pytest.approx(0.0)
+    assert bool(order["settlement_ready"]) is True

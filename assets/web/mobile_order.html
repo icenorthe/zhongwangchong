@@ -66,39 +66,47 @@
     #page-order .badge{background:linear-gradient(180deg,#f8fafc 0%,#edf3fa 100%);border-color:#dbe4ef;color:#334155}
     #submit-order-btn{min-height:56px;font-size:16px;letter-spacing:.02em;box-shadow:0 18px 34px rgba(15,23,42,.18)}
     #submit-order-btn:hover{transform:translateY(-1px);box-shadow:0 22px 40px rgba(15,23,42,.2)}
-    #balance-hint{font-size:13px}
     .ledger-amount{display:inline-flex;align-items:center;gap:6px;font-weight:800}
     .ledger-amount.plus{color:var(--ok)}
     .ledger-amount.minus{color:var(--fail)}
     .charge-summary{display:grid;gap:8px;margin:8px 0 6px}
-    .charge-summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+    .charge-summary-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
     .charge-summary-item{min-width:0;padding:10px 12px;border:1px solid rgba(226,232,240,.95);border-radius:14px;background:linear-gradient(180deg,#fff 0%,#f8fafc 100%)}
     .charge-summary-item strong{display:block;font-size:12px;line-height:1.3;color:var(--muted);font-weight:700}
     .charge-summary-item span{display:block;margin-top:6px;font-size:16px;line-height:1.25;color:#0f172a;font-weight:800;word-break:break-word}
-    .charge-summary-item.total{background:linear-gradient(180deg,#eef4ff 0%,#f8fbff 100%);border-color:#c7d7fe}
-    .charge-summary-item.total span{color:#1d4ed8}
-    .charge-summary-note{margin:0;padding:9px 12px;border-radius:12px;background:#f8fafc;border:1px dashed var(--border-strong);font-size:12px;line-height:1.55;color:var(--muted)}
     .official-detail{margin-top:6px;border:1px dashed var(--border-strong);border-radius:12px;padding:6px 10px;background:#f9fafb}
     .official-detail summary{cursor:pointer;font-size:12px;color:var(--muted);font-weight:700;list-style:none}
     .official-detail summary::-webkit-details-marker{display:none}
     .official-detail-body p{margin:4px 0;color:var(--muted);font-size:12px}
+    .order-help-note{margin:0 0 12px}
+    .order-help-note details{border:1px dashed var(--border-strong);border-radius:14px;background:#f9fafb;padding:10px 12px}
+    .order-help-note summary{cursor:pointer;list-style:none;font-size:13px;font-weight:800;color:#334155}
+    .order-help-note summary::-webkit-details-marker{display:none}
+    .order-help-body{display:grid;gap:10px;padding-top:8px}
+    .order-help-body p{margin:0;color:var(--muted);font-size:13px;line-height:1.6}
+    .order-help-group{display:flex;align-items:center;gap:10px}
+    .order-help-group img{width:72px;height:72px;border-radius:12px;border:1px solid rgba(226,232,240,.95);background:#fff;object-fit:cover}
+    .order-help-group .hint{margin:0}
     .station-card{display:grid;gap:14px;padding:18px;background:
-      radial-gradient(110% 120% at 0% 0%,rgba(254,243,199,.45) 0%,rgba(254,243,199,0) 44%),
-      linear-gradient(180deg,#ffffff 0%,#f8fafc 100%);position:relative;overflow:hidden}
-    .station-card::after{content:"";position:absolute;right:-28px;bottom:-28px;width:120px;height:120px;border-radius:28px;background:linear-gradient(135deg,rgba(219,234,254,.36),rgba(219,234,254,0));transform:rotate(14deg)}
+      linear-gradient(145deg,rgba(255,255,255,.78) 0%,rgba(255,255,255,.18) 24%,rgba(255,255,255,0) 36%),
+      radial-gradient(135% 120% at 0% 0%,rgba(71,85,105,.12) 0%,rgba(71,85,105,0) 42%),
+      radial-gradient(120% 110% at 100% 0%,rgba(148,163,184,.18) 0%,rgba(148,163,184,0) 38%),
+      linear-gradient(135deg,rgba(248,250,252,.98) 0%,rgba(239,244,248,.98) 52%,rgba(230,237,243,.98) 100%);
+      border-color:rgba(186,198,210,.9);position:relative;overflow:hidden;box-shadow:0 20px 42px rgba(15,23,42,.09);backdrop-filter:blur(10px)}
+    .station-card::after{content:"";position:absolute;right:-26px;bottom:-30px;width:142px;height:142px;border-radius:36px;background:linear-gradient(135deg,rgba(15,23,42,.12),rgba(148,163,184,0) 68%);transform:rotate(15deg)}
+    .station-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,rgba(15,23,42,.92),rgba(71,85,105,.48))}
     .station-head{display:grid;gap:10px}
     .station-head h3{margin:0;font-size:22px;line-height:1.2}
     .station-badges{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-    .station-region-chip,.station-order-pill,.legend-chip{display:inline-flex;align-items:center;justify-content:center;padding:7px 12px;border-radius:999px;border:1px solid var(--border);font-size:12px;font-weight:700;background:#fff}
+    .station-region-chip,.station-order-pill,.legend-chip{display:inline-flex;align-items:center;justify-content:center;padding:7px 12px;border-radius:999px;border:1px solid rgba(192,203,214,.9);font-size:12px;font-weight:700;background:rgba(255,255,255,.72);backdrop-filter:blur(8px)}
     .station-order-pill.ready{color:var(--ok);background:#f0fdf4;border-color:#86efac}
     .station-order-pill.waiting{color:#9a3412;background:#fff7ed;border-color:#fdba74}
     .station-meta-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
     .order-form-grid{display:grid;grid-template-columns:minmax(180px,.9fr) minmax(0,1.1fr);gap:14px;align-items:start}
-    .station-metric{padding:12px 14px;border-radius:14px;border:1px solid var(--border);background:rgba(255,255,255,.94)}
-    .station-metric-label{display:block;margin-bottom:6px;color:var(--muted);font-size:12px;font-weight:700;letter-spacing:.02em}
-    .station-metric-value{display:block;font-size:15px;font-weight:700;color:var(--text);word-break:break-word}
-    #page-order .station-card{gap:10px;padding:12px 12px 10px;border-radius:14px;box-shadow:0 8px 18px rgba(15,23,42,.05)}
-    #page-order .station-card::after{display:none}
+    .station-metric{padding:12px 14px;border-radius:14px;border:1px solid rgba(203,213,225,.95);background:linear-gradient(180deg,rgba(255,255,255,.88) 0%,rgba(247,250,252,.82) 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.72)}
+    .station-metric-label{display:block;margin-bottom:6px;color:#64748b;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+    .station-metric-value{display:block;font-size:15px;font-weight:800;color:#0f172a;word-break:break-word}
+    #page-order .station-card{gap:10px;padding:12px 12px 10px 14px;border-radius:14px;box-shadow:0 14px 28px rgba(15,23,42,.08)}
     #page-order .station-head{grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px}
     #page-order .station-head>div{display:grid;gap:4px;min-width:0}
     #page-order .station-head h3{font-size:18px;line-height:1.1}
@@ -108,7 +116,9 @@
     #page-order .station-metric{padding:9px 10px;border-radius:12px}
     #page-order .station-metric-label{margin-bottom:4px;font-size:11px}
     #page-order .station-metric-value{font-size:13px;line-height:1.35}
-    .amount-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.amount-btn{text-align:center;border:1px solid #dbe4ef;border-radius:18px;background:linear-gradient(180deg,#ffffff 0%,#f8fafc 100%);padding:12px 8px;color:var(--text);box-shadow:0 8px 18px rgba(15,23,42,.04);min-height:92px;display:grid;align-content:center;justify-items:center;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}.amount-btn:hover{transform:translateY(-1px);box-shadow:0 14px 24px rgba(15,23,42,.08)}.amount-btn strong{display:block;font-size:24px;margin-bottom:4px;color:var(--text);line-height:1}.amount-btn span{color:var(--muted);font-size:11px;line-height:1.35}.amount-btn.active{border-color:#111111;background:linear-gradient(180deg,#ffffff 0%,#edf4ff 100%);box-shadow:0 14px 26px rgba(15,23,42,.1)}.amount-btn.active strong{color:#0f172a}
+    .amount-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.amount-btn{text-align:center;border:1px solid rgba(203,213,225,.96);border-radius:20px;background:linear-gradient(180deg,rgba(255,255,255,.98) 0%,rgba(245,248,251,.94) 100%);padding:12px 8px;color:var(--text);box-shadow:0 8px 18px rgba(15,23,42,.04),inset 0 1px 0 rgba(255,255,255,.82);min-height:92px;display:grid;align-content:center;justify-items:center;position:relative;overflow:hidden;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease,background .18s ease,color .18s ease}.amount-btn::before{content:"";position:absolute;inset:1px 1px auto 1px;height:40%;border-radius:18px;background:linear-gradient(180deg,rgba(255,255,255,.76),rgba(255,255,255,0));pointer-events:none}.amount-btn:hover{transform:translateY(-1px);box-shadow:0 14px 24px rgba(15,23,42,.08),inset 0 1px 0 rgba(255,255,255,.82)}.amount-btn strong{display:block;font-size:24px;margin-bottom:4px;color:var(--text);line-height:1;position:relative;z-index:1}.amount-btn span{color:var(--muted);font-size:11px;line-height:1.35;position:relative;z-index:1}.amount-btn.active{border-color:rgba(15,23,42,.96);background:
+      radial-gradient(120% 120% at 0% 0%,rgba(148,163,184,.24) 0%,rgba(148,163,184,0) 36%),
+      linear-gradient(180deg,#1e293b 0%,#020617 100%);box-shadow:0 20px 34px rgba(2,6,23,.3),inset 0 1px 0 rgba(255,255,255,.1)}.amount-btn.active::before{background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,0))}.amount-btn.active strong,.amount-btn.active span{color:#f8fafc}
     .method-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:12px}.method-btn{text-align:left;border:1px solid rgba(226,232,240,.92);border-radius:18px;background:linear-gradient(180deg,#ffffff 0%,#f8fafc 100%);padding:14px 12px;color:var(--text);position:relative;overflow:hidden;box-shadow:0 10px 22px rgba(15,23,42,.05)}.method-btn::after{content:"";position:absolute;right:-20px;top:-20px;width:86px;height:86px;border-radius:50%;background:rgba(226,232,240,.42)}.method-btn strong{display:block;font-size:16px;margin-bottom:6px;position:relative;z-index:1}.method-btn span{color:var(--muted);font-size:12px;line-height:1.5;position:relative;z-index:1}.method-btn.active{border-color:#111111;background:linear-gradient(180deg,#ffffff 0%,#eef4ff 100%);box-shadow:0 16px 30px rgba(15,23,42,.10)}
     .promo-board{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0 0 12px}
     .promo-card{border:1px solid rgba(226,232,240,.9);border-radius:18px;background:linear-gradient(180deg,#fff 0%,#f8fafc 100%);padding:12px 14px;position:relative;overflow:hidden;box-shadow:0 10px 24px rgba(15,23,42,.05)}
@@ -215,8 +225,6 @@
       .page-tabs{grid-template-columns:repeat(5,minmax(0,1fr))}
       .page-btn{padding:12px 8px;font-size:12px;gap:8px}
       .page-btn::before{width:24px;height:24px;border-radius:9px}
-      #recharge-qr-wrap{grid-template-columns:1fr}
-      #recharge-qr-wrap .recharge-qr-stack{padding:8px 0}
       #manual-qr-wrap{grid-template-columns:1fr}
     }
     @media (max-width:760px){
@@ -297,17 +305,19 @@
     }
     html{scroll-behavior:smooth}
     :root{
-      --font-sans:"HarmonyOS Sans SC","MiSans","PingFang SC","Microsoft YaHei",sans-serif;
-      --ink-deep:#0f172a;
-      --ink-soft:#516072;
-      --line-soft:rgba(203,213,225,.7);
+      --font-sans:"HarmonyOS Sans SC","MiSans","PingFang SC","Source Han Sans SC","Noto Sans SC",sans-serif;
+      --font-mono:"Fira Code","JetBrains Mono","Cascadia Mono","Consolas",monospace;
+      --ink-deep:#162032;
+      --ink-soft:#66758a;
+      --line-soft:rgba(148,163,184,.22);
       --surface-glass:rgba(255,255,255,.78);
-      --surface-strong:rgba(255,255,255,.92);
-      --brand-blue:#23456f;
-      --brand-teal:#0f766e;
-      --brand-warm:#d97706;
-      --shadow-soft:0 18px 38px rgba(15,23,42,.08);
-      --shadow-strong:0 26px 64px rgba(15,23,42,.14);
+      --surface-strong:rgba(255,255,255,.93);
+      --brand-blue:#335c89;
+      --brand-teal:#5f8797;
+      --brand-warm:#b7a07a;
+      --brand-stone:#eef3f8;
+      --shadow-soft:0 16px 36px rgba(15,23,42,.07);
+      --shadow-strong:0 24px 58px rgba(15,23,42,.12);
     }
     @keyframes surfaceIn{
       from{opacity:0;transform:translateY(12px);filter:blur(8px)}
@@ -320,60 +330,85 @@
     }
     body{
       font-family:var(--font-sans);
+      -webkit-font-smoothing:antialiased;
+      text-rendering:optimizeLegibility;
       background:
-        radial-gradient(120% 120% at 0% 0%,rgba(250,204,21,.18) 0%,rgba(250,204,21,0) 38%),
-        radial-gradient(95% 110% at 100% 0%,rgba(59,130,246,.16) 0%,rgba(59,130,246,0) 46%),
-        radial-gradient(90% 110% at 12% 100%,rgba(20,184,166,.12) 0%,rgba(20,184,166,0) 48%),
-        linear-gradient(180deg,#edf2f7 0%,#f3f6f9 52%,#f6f8fb 100%);
+        radial-gradient(120% 120% at 0% 0%,rgba(143,173,208,.15) 0%,rgba(143,173,208,0) 34%),
+        radial-gradient(95% 110% at 100% 0%,rgba(198,212,229,.22) 0%,rgba(198,212,229,0) 46%),
+        radial-gradient(90% 110% at 15% 100%,rgba(228,234,241,.72) 0%,rgba(228,234,241,0) 48%),
+        linear-gradient(180deg,#edf2f6 0%,#f4f7fa 48%,#f8fafc 100%);
       color:var(--ink-deep);
     }
     body::before{
-      right:-120px;
-      top:-90px;
-      width:360px;
-      height:360px;
-      background:radial-gradient(circle,rgba(59,130,246,.18) 0%,rgba(59,130,246,0) 72%);
+      right:-130px;
+      top:-96px;
+      width:380px;
+      height:380px;
+      background:radial-gradient(circle,rgba(74,116,163,.14) 0%,rgba(74,116,163,0) 72%);
       animation:ambientShift 14s ease-in-out infinite;
     }
     body::after{
-      left:-140px;
+      left:-150px;
       bottom:-170px;
-      width:380px;
-      height:380px;
-      background:radial-gradient(circle,rgba(13,148,136,.15) 0%,rgba(13,148,136,0) 72%);
+      width:400px;
+      height:400px;
+      background:radial-gradient(circle,rgba(188,202,219,.32) 0%,rgba(188,202,219,0) 72%);
       animation:ambientShift 16s ease-in-out infinite reverse;
     }
     .shell{
-      max-width:920px;
+      max-width:930px;
       background:
-        linear-gradient(180deg,rgba(255,255,255,.96) 0%,rgba(247,249,252,.92) 100%);
-      border:1px solid rgba(255,255,255,.82);
-      box-shadow:0 28px 80px rgba(15,23,42,.12);
+        linear-gradient(180deg,rgba(255,255,255,.97) 0%,rgba(245,248,251,.94) 100%);
+      border:1px solid rgba(255,255,255,.92);
+      border-radius:30px;
+      box-shadow:0 30px 80px rgba(15,23,42,.10);
+    }
+    .shell::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        linear-gradient(180deg,rgba(255,255,255,.72),rgba(255,255,255,0) 18%),
+        repeating-linear-gradient(90deg,rgba(148,163,184,.028) 0 1px,transparent 1px 26px),
+        repeating-linear-gradient(0deg,rgba(148,163,184,.02) 0 1px,transparent 1px 26px);
+      opacity:.56;
+      pointer-events:none;
     }
     .shell::after{
       content:"";
       position:absolute;
       inset:0;
       background:
-        linear-gradient(140deg,rgba(255,255,255,.28),rgba(255,255,255,0) 32%),
-        radial-gradient(80% 80% at 100% 0%,rgba(191,219,254,.18),transparent 60%);
+        linear-gradient(140deg,rgba(255,255,255,.22),rgba(255,255,255,0) 28%),
+        radial-gradient(82% 78% at 100% 0%,rgba(191,219,254,.10),transparent 58%);
       pointer-events:none;
       mix-blend-mode:screen;
     }
     .hero{
-      padding:28px 26px 18px;
+      padding:30px 28px 18px;
       background:
-        radial-gradient(110% 120% at 0% 0%,rgba(250,204,21,.16) 0%,rgba(250,204,21,0) 36%),
-        radial-gradient(90% 100% at 100% 0%,rgba(96,165,250,.18) 0%,rgba(96,165,250,0) 46%),
-        linear-gradient(180deg,rgba(255,255,255,.96) 0%,rgba(244,248,252,.94) 100%);
+        linear-gradient(135deg,rgba(255,255,255,.82) 0%,rgba(255,255,255,0) 42%),
+        radial-gradient(90% 100% at 100% 0%,rgba(154,188,220,.18) 0%,rgba(154,188,220,0) 42%),
+        linear-gradient(180deg,rgba(251,252,253,.99) 0%,rgba(244,247,250,.96) 100%);
     }
     .hero::before{
-      right:-38px;
-      top:-64px;
-      width:220px;
-      height:220px;
-      border-radius:42px;
-      background:linear-gradient(135deg,rgba(255,255,255,.6),rgba(255,255,255,.08));
+      right:-34px;
+      top:-70px;
+      width:240px;
+      height:240px;
+      border-radius:46px;
+      background:linear-gradient(135deg,rgba(255,255,255,.58),rgba(255,255,255,.06));
+    }
+    .hero::after{
+      content:"";
+      position:absolute;
+      left:22px;
+      bottom:12px;
+      width:120px;
+      height:8px;
+      border-radius:999px;
+      background:linear-gradient(90deg,rgba(109,139,170,.20),rgba(109,139,170,0));
+      opacity:.52;
     }
     .hero h1,
     .topbar h2,
@@ -388,6 +423,7 @@
     .hero h1{
       text-wrap:balance;
       max-width:10em;
+      text-shadow:0 1px 0 rgba(255,255,255,.7);
     }
     .hero p,
     .hint,
@@ -408,8 +444,8 @@
     .legend-chip,
     .soon-chip{
       background:rgba(255,255,255,.72);
-      border-color:rgba(203,213,225,.72);
-      backdrop-filter:blur(16px);
+      border-color:rgba(203,213,225,.66);
+      backdrop-filter:blur(18px);
     }
     .panel,
     .status-box,
@@ -425,8 +461,32 @@
     .modal-card,
     .price-chip,
     .contact-box{
-      border-color:rgba(203,213,225,.72);
+      border-color:rgba(203,213,225,.64);
       box-shadow:var(--shadow-soft);
+    }
+    .panel,
+    .order-section,
+    .station-card,
+    .order-item,
+    .recharge-item,
+    .station-status-card,
+    .modal-card{
+      position:relative;
+      isolation:isolate;
+    }
+    .panel::after,
+    .order-section::after,
+    .station-card::before,
+    .order-item::before,
+    .recharge-item::before,
+    .station-status-card::before{
+      content:"";
+      position:absolute;
+      inset:1px;
+      border-radius:inherit;
+      border:1px solid rgba(255,255,255,.54);
+      pointer-events:none;
+      z-index:-1;
     }
     .panel,
     .status-box,
@@ -453,15 +513,17 @@
     }
     .tabs,
     .page-tabs{
-      background:linear-gradient(180deg,rgba(255,255,255,.84) 0%,rgba(241,245,249,.96) 100%);
-      border-color:rgba(203,213,225,.82);
-      box-shadow:0 16px 34px rgba(15,23,42,.07);
-      backdrop-filter:blur(16px);
+      background:
+        linear-gradient(180deg,rgba(255,255,255,.90) 0%,rgba(241,245,249,.96) 100%);
+      border-color:rgba(203,213,225,.72);
+      box-shadow:0 16px 32px rgba(15,23,42,.07);
+      backdrop-filter:blur(18px);
     }
     .page-tabs{
       position:sticky;
       top:12px;
       z-index:12;
+      border-radius:22px;
     }
     .tab-btn,
     .page-btn,
@@ -477,13 +539,14 @@
     }
     .tab-btn.active,
     .page-btn.active{
-      background:linear-gradient(135deg,#102038 0%,#1f436a 55%,#102038 100%);
-      border-color:#16365b;
-      box-shadow:0 14px 30px rgba(15,23,42,.18);
+      background:linear-gradient(180deg,#20324a 0%,#2c496d 100%);
+      border-color:#314f74;
+      box-shadow:0 14px 28px rgba(15,23,42,.16);
     }
     .page-btn{
       min-height:74px;
       color:#546273;
+      border-radius:18px;
     }
     .page-btn::after{
       content:"";
@@ -491,7 +554,7 @@
       inset:auto 10px 6px;
       height:3px;
       border-radius:999px;
-      background:linear-gradient(90deg,rgba(15,23,42,0),rgba(59,130,246,.38),rgba(15,23,42,0));
+      background:linear-gradient(90deg,rgba(15,23,42,0),rgba(152,186,220,.52),rgba(15,23,42,0));
       opacity:0;
       transition:opacity .2s ease;
     }
@@ -504,18 +567,18 @@
     }
     input,
     select{
-      background:rgba(255,255,255,.88);
-      border-color:rgba(203,213,225,.78);
+      background:linear-gradient(180deg,rgba(255,255,255,.96) 0%,rgba(248,250,252,.94) 100%);
+      border-color:rgba(203,213,225,.74);
     }
     input:focus,
     select:focus{
-      border-color:rgba(37,99,235,.42);
-      box-shadow:0 0 0 4px rgba(59,130,246,.12),0 10px 24px rgba(15,23,42,.06);
+      border-color:rgba(74,116,163,.38);
+      box-shadow:0 0 0 4px rgba(152,186,220,.18),0 10px 24px rgba(15,23,42,.06);
     }
     button{
-      background:linear-gradient(135deg,#102038 0%,#1f436a 52%,#102038 100%);
+      background:linear-gradient(180deg,#24364d 0%,#304a6b 100%);
       background-size:180% 180%;
-      box-shadow:0 16px 34px rgba(15,23,42,.18);
+      box-shadow:0 14px 28px rgba(15,23,42,.14);
     }
     button:hover{
       filter:saturate(1.05);
@@ -524,26 +587,27 @@
     button.secondary,
     .modal-close{
       background:rgba(255,255,255,.88);
-      border:1px solid rgba(203,213,225,.78);
+      border:1px solid rgba(203,213,225,.72);
       color:var(--ink-deep);
-      box-shadow:0 10px 22px rgba(15,23,42,.06);
+      box-shadow:0 8px 18px rgba(15,23,42,.05);
     }
     .status-box{
-      background:linear-gradient(180deg,rgba(255,255,255,.98) 0%,rgba(244,248,252,.94) 100%);
+      background:linear-gradient(180deg,rgba(255,255,255,.98) 0%,rgba(243,247,250,.95) 100%);
     }
     .order-section{
-      border-radius:24px;
+      border-radius:28px;
       background:
-        linear-gradient(180deg,rgba(255,255,255,.98) 0%,rgba(246,249,252,.94) 100%);
+        linear-gradient(180deg,rgba(255,255,255,.98) 0%,rgba(246,249,252,.95) 100%);
     }
     .order-section::before{
       height:4px;
-      background:linear-gradient(90deg,#102038 0%,#2b6cb0 42%,#d97706 100%);
+      background:linear-gradient(90deg,#2a405d 0%,#6c93bc 100%);
     }
     .station-card{
       background:
-        radial-gradient(120% 120% at 0% 0%,rgba(250,204,21,.14) 0%,rgba(250,204,21,0) 34%),
-        linear-gradient(180deg,rgba(255,255,255,.98) 0%,rgba(246,249,252,.94) 100%);
+        linear-gradient(145deg,rgba(255,255,255,.84) 0%,rgba(255,255,255,.16) 26%,rgba(255,255,255,0) 38%),
+        radial-gradient(135% 120% at 100% 0%,rgba(193,205,218,.18) 0%,rgba(193,205,218,0) 36%),
+        linear-gradient(180deg,rgba(247,250,252,.99) 0%,rgba(236,242,247,.97) 100%);
     }
     .amount-btn strong,
     .promo-card strong,
@@ -554,14 +618,12 @@
     .amount-btn.active,
     .method-btn.active,
     .status-region-btn.active{
-      border-color:rgba(30,64,175,.4);
-      box-shadow:0 18px 34px rgba(15,23,42,.12);
       transform:translateY(-2px);
     }
     .promo-card{
       border-radius:20px;
       background:
-        linear-gradient(180deg,rgba(255,255,255,.98) 0%,rgba(246,249,252,.94) 100%);
+        linear-gradient(180deg,rgba(255,255,255,.98) 0%,rgba(246,249,252,.95) 100%);
     }
     .promo-card::after{
       content:"";
@@ -581,8 +643,8 @@
       background:linear-gradient(180deg,rgba(248,250,252,.98) 0%,rgba(242,246,250,.96) 100%);
     }
     .socket-chip{
-      background:rgba(255,255,255,.94);
-      box-shadow:inset 0 1px 0 rgba(255,255,255,.9);
+      background:linear-gradient(180deg,rgba(255,255,255,.95) 0%,rgba(247,249,251,.92) 100%);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.92),0 4px 12px rgba(15,23,42,.035);
     }
     .modal-backdrop{
       background:rgba(15,23,42,.52);
@@ -598,25 +660,641 @@
     .contact-box{
       background:rgba(255,255,255,.9);
     }
+    .hero-summary strong,
+    .station-no-badge,
+    .status-overview-metric strong,
+    .charge-summary-item span,
+    .amount-btn strong,
+    .price-chip strong,
+    .ledger-amount{
+      font-family:var(--font-sans);
+      font-variant-numeric:tabular-nums;
+      letter-spacing:-.015em;
+    }
+    .order-item h3,
+    .station-card h3,
+    .recharge-item h3{
+      margin-bottom:10px;
+      font-weight:900;
+      letter-spacing:.01em;
+    }
+    .order-item,
+    .recharge-item,
+    .station-status-card{
+      background:
+        linear-gradient(180deg,rgba(255,255,255,.97) 0%,rgba(246,249,252,.95) 100%);
+      border-radius:20px;
+    }
+    .method-btn,
+    .amount-btn,
+    .price-chip,
+    .contact-box,
+    .station-metric,
+    .status-region-btn,
+    .status-overview-metric-line,
+    .station-query-note,
+    .official-detail,
+    .order-help-note details{
+      background:
+        linear-gradient(180deg,rgba(255,255,255,.95) 0%,rgba(246,249,252,.92) 100%);
+      border-color:rgba(203,213,225,.68);
+      box-shadow:0 8px 18px rgba(15,23,42,.045);
+    }
+    .hero-badge{
+      background:
+        linear-gradient(180deg,rgba(255,255,255,.76) 0%,rgba(244,248,252,.72) 100%);
+    }
+    .badge{
+      color:#435365;
+    }
+    .status-box::before{
+      width:5px;
+      border-radius:999px;
+      background:linear-gradient(180deg,#6c93bc 0%,#bfd3e6 100%);
+    }
+    .hero-top{
+      align-items:flex-end;
+      gap:18px;
+    }
+    .hero-top>div{
+      display:grid;
+      gap:10px;
+      max-width:37rem;
+    }
+    .hero h1{
+      font-size:clamp(28px,4.4vw,42px);
+      line-height:1.04;
+      letter-spacing:-.028em;
+      max-width:8.5em;
+    }
+    .hero p{
+      font-size:14px;
+      line-height:1.78;
+      max-width:31em;
+      color:#718198;
+    }
+    .hero-badge{
+      border-radius:22px;
+      padding:14px 16px;
+      box-shadow:0 10px 24px rgba(15,23,42,.05),inset 0 1px 0 rgba(255,255,255,.6);
+    }
+    .hero-summary{
+      gap:12px;
+      font-size:12px;
+      letter-spacing:.01em;
+    }
+    .topbar{
+      align-items:flex-end;
+    }
+    .topbar h2{
+      letter-spacing:-.02em;
+    }
+    .topbar h2::before{
+      width:12px;
+      height:12px;
+      border-radius:4px;
+      opacity:.9;
+    }
+    #service-status-banner{
+      border-radius:18px;
+      padding:14px 16px;
+    }
+    .order-list,
+    .recharge-list{
+      gap:14px;
+    }
+    .order-item,
+    .recharge-item{
+      padding:18px 18px 16px;
+      gap:6px;
+    }
+    .page-btn:hover,
+    .tab-btn:hover,
+    .status-region-btn:hover{
+      transform:translateY(-1px);
+    }
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    .tab-btn:focus-visible,
+    .page-btn:focus-visible,
+    .amount-btn:focus-visible,
+    .method-btn:focus-visible,
+    .status-region-btn:focus-visible,
+    .station-collapse>summary:focus-visible{
+      outline:2px solid rgba(74,116,163,.6);
+      outline-offset:2px;
+    }
     .back-to-top{
       right:18px;
       bottom:24px;
-      background:linear-gradient(135deg,#102038 0%,#1f436a 100%);
+      background:linear-gradient(180deg,#24364d 0%,#304a6b 100%);
+    }
+    .order-item h3,
+    .recharge-item h3{
+      font-size:18px;
+      line-height:1.22;
+      margin-bottom:8px;
+    }
+    .order-item p,
+    .recharge-item p{
+      margin:2px 0;
+      line-height:1.62;
+    }
+    .order-item .charge-summary{
+      margin:8px 0 8px;
+    }
+    .order-status,
+    .recharge-status{
+      margin-top:12px;
+      padding:6px 11px;
+      letter-spacing:.01em;
+    }
+    .order-help-note details{
+      padding:14px 14px 13px;
+    }
+    .order-help-note summary{
+      font-size:14px;
+      letter-spacing:-.01em;
+    }
+    .official-detail{
+      margin-top:10px;
+      padding:8px 11px;
+    }
+    .official-detail summary{
+      font-size:13px;
+    }
+    .status-content-header{
+      gap:12px;
+    }
+    .status-content-header h3{
+      font-size:24px;
+      letter-spacing:-.02em;
+    }
+    .status-content-header p{
+      max-width:42em;
+      line-height:1.62;
+      color:#708096;
+    }
+    .station-status-card{
+      border-radius:20px;
+    }
+    .station-collapse>summary{
+      padding:14px 16px;
+    }
+    .station-summary-head{
+      gap:12px;
+    }
+    .station-summary-main{
+      gap:12px;
+      align-items:flex-start;
+    }
+    .station-summary-meta{
+      gap:8px;
+    }
+    .station-collapse-body{
+      padding:14px 16px 16px;
+    }
+    .station-status-head h4{
+      font-size:19px;
+      letter-spacing:-.015em;
+    }
+    .station-status-sub{
+      line-height:1.58;
     }
     @media (max-width:760px){
       body{background:
-        radial-gradient(120% 120% at 0% 0%,rgba(250,204,21,.16) 0%,rgba(250,204,21,0) 36%),
-        radial-gradient(95% 110% at 100% 0%,rgba(59,130,246,.16) 0%,rgba(59,130,246,0) 44%),
-        linear-gradient(180deg,#edf2f7 0%,#f3f6f9 100%)}
+        radial-gradient(120% 120% at 0% 0%,rgba(143,173,208,.14) 0%,rgba(143,173,208,0) 36%),
+        radial-gradient(95% 110% at 100% 0%,rgba(198,212,229,.18) 0%,rgba(198,212,229,0) 44%),
+        linear-gradient(180deg,#edf2f6 0%,#f4f7fa 100%)}
       .shell{
         background:linear-gradient(180deg,rgba(255,255,255,.98) 0%,rgba(247,249,252,.96) 100%);
       }
       .hero{padding:20px 16px 14px}
+      .hero-top{
+        align-items:flex-start;
+        gap:10px;
+      }
+      .hero-top>div{
+        gap:8px;
+      }
+      .hero h1{
+        font-size:clamp(24px,8vw,32px);
+        max-width:9.5em;
+      }
+      .hero p{
+        font-size:13px;
+        line-height:1.68;
+      }
       .panel{border-radius:20px}
       .hero-badge{border-radius:18px}
       .page-tabs{
         position:static;
         box-shadow:0 14px 28px rgba(15,23,42,.08);
+      }
+      .page-btn{
+        min-height:68px;
+      }
+      .order-item,
+      .recharge-item{
+        padding:15px 14px 14px;
+      }
+      .order-item h3,
+      .recharge-item h3{
+        font-size:17px;
+      }
+      .status-content-header h3{
+        font-size:20px;
+      }
+      .station-collapse>summary{
+        padding:12px 13px;
+      }
+      .station-collapse-body{
+        padding:12px 13px 14px;
+      }
+    }
+    .hero-compact{
+      display:grid;
+      gap:12px;
+      position:relative;
+      z-index:1;
+    }
+    .hero-kicker{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      width:max-content;
+      max-width:100%;
+      padding:7px 12px;
+      border-radius:999px;
+      border:1px solid rgba(191,219,254,.72);
+      background:rgba(255,255,255,.86);
+      color:#45617f;
+      font-size:12px;
+      font-weight:800;
+      letter-spacing:.06em;
+      text-transform:uppercase;
+      box-shadow:0 8px 18px rgba(15,23,42,.05);
+    }
+    .hero-kicker::before{
+      content:"";
+      width:8px;
+      height:8px;
+      border-radius:999px;
+      background:linear-gradient(180deg,#7ea4cb 0%,#bfd3e6 100%);
+      box-shadow:0 0 0 4px rgba(191,219,254,.26);
+      flex:none;
+    }
+    .hero-top{
+      align-items:flex-start;
+      gap:12px;
+    }
+    .hero-top>div{
+      display:grid;
+      gap:8px;
+      max-width:30rem;
+    }
+    .hero h1{
+      font-size:clamp(26px,4vw,34px);
+      line-height:1.08;
+      letter-spacing:-.03em;
+      max-width:7.5em;
+    }
+    .hero p{
+      font-size:13px;
+      line-height:1.7;
+      max-width:28em;
+      color:#73839a;
+    }
+    .hero-badge{
+      border-radius:18px;
+      padding:11px 13px;
+      box-shadow:0 8px 18px rgba(15,23,42,.04),inset 0 1px 0 rgba(255,255,255,.6);
+    }
+    .hero-summary{
+      gap:10px;
+      font-size:12px;
+      letter-spacing:.01em;
+    }
+    #service-status-banner{
+      border-radius:18px;
+      padding:14px 16px;
+    }
+    .page-tabs{
+      padding:8px 10px calc(8px + env(safe-area-inset-bottom));
+    }
+    .page-btn{
+      padding:10px 6px;
+    }
+    .topbar{
+      align-items:flex-end;
+    }
+    .topbar h2{
+      letter-spacing:-.02em;
+    }
+    .topbar h2::before{
+      width:12px;
+      height:12px;
+      border-radius:4px;
+      opacity:.9;
+    }
+    .station-head{
+      gap:14px;
+    }
+    .station-head h3{
+      font-size:24px;
+      letter-spacing:-.03em;
+      margin-bottom:6px;
+    }
+    .station-region-chip,
+    .station-order-pill,
+    .legend-chip,
+    .count-pill,
+    .station-toggle,
+    .station-inline-status{
+      box-shadow:0 4px 12px rgba(15,23,42,.035);
+    }
+    .order-list,
+    .recharge-list{
+      gap:10px;
+    }
+    .order-item,
+    .recharge-item{
+      padding:14px 14px 13px;
+      gap:4px;
+      display:grid;
+      align-content:start;
+      position:relative;
+    }
+    .order-item::after{
+      content:"";
+      position:absolute;
+      left:18px;
+      right:18px;
+      top:0;
+      height:1px;
+      background:linear-gradient(90deg,transparent,rgba(191,219,254,.52),transparent);
+      pointer-events:none;
+    }
+    .order-card-top{
+      display:grid;
+      grid-template-columns:minmax(0,1fr) auto;
+      gap:10px;
+      align-items:start;
+      margin-bottom:2px;
+    }
+    .order-card-top>div{
+      min-width:0;
+      display:grid;
+      gap:4px;
+    }
+    .order-slot{
+      margin:0;
+      font-size:12px;
+      color:#7a8aa0;
+    }
+    .order-card-grid{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:8px;
+      margin:6px 0 2px;
+    }
+    .order-kv{
+      min-width:0;
+      padding:10px 11px;
+      border-radius:14px;
+      border:1px solid rgba(203,213,225,.62);
+      background:linear-gradient(180deg,rgba(255,255,255,.95) 0%,rgba(247,249,252,.92) 100%);
+      display:grid;
+      gap:5px;
+      box-shadow:0 6px 14px rgba(15,23,42,.035);
+    }
+    .order-kv span{
+      font-size:11px;
+      color:#8392a6;
+      line-height:1.2;
+    }
+    .order-kv strong{
+      font-size:13px;
+      color:#1b2838;
+      line-height:1.35;
+      font-weight:800;
+      word-break:break-word;
+    }
+    .order-inline-note{
+      margin:2px 0 0;
+      padding:9px 11px;
+      border-radius:12px;
+      background:rgba(248,250,252,.92);
+      border:1px solid rgba(226,232,240,.9);
+      font-size:12px;
+      line-height:1.6;
+      color:#6f8096;
+    }
+    .order-inline-note strong{
+      color:#30455f;
+    }
+    .order-ids{
+      display:grid;
+      gap:2px;
+      margin-top:2px;
+    }
+    .order-ids p{
+      margin:0;
+      font-size:12px;
+      color:#7a8aa0;
+      line-height:1.45;
+    }
+    .order-item h3,
+    .recharge-item h3{
+      font-size:18px;
+      line-height:1.22;
+      margin-bottom:8px;
+    }
+    .order-item p,
+    .recharge-item p{
+      margin:2px 0;
+      line-height:1.62;
+    }
+    .charge-summary-grid{
+      gap:8px;
+    }
+    .charge-summary-item{
+      border-radius:14px;
+      padding:10px 11px;
+    }
+    .charge-summary-item strong{
+      font-size:11px;
+      letter-spacing:.06em;
+      text-transform:uppercase;
+      color:#8392a6;
+    }
+    .charge-summary-item span{
+      margin-top:8px;
+      font-size:17px;
+      line-height:1.2;
+    }
+    .order-status,
+    .recharge-status{
+      margin-top:12px;
+      padding:6px 11px;
+      letter-spacing:.01em;
+    }
+    .order-help-note details{
+      padding:14px 14px 13px;
+    }
+    .order-help-note summary{
+      font-size:14px;
+      letter-spacing:-.01em;
+    }
+    .official-detail{
+      margin-top:10px;
+      padding:8px 11px;
+    }
+    .official-detail summary{
+      font-size:13px;
+    }
+    .status-content-header{
+      gap:8px;
+      margin-bottom:2px;
+    }
+    .status-content-header h3{
+      font-size:20px;
+      letter-spacing:-.02em;
+    }
+    .status-content-header p{
+      max-width:42em;
+      line-height:1.62;
+      color:#708096;
+    }
+    .status-overview-metric-line{
+      border-radius:16px;
+      padding:12px 14px;
+    }
+    .status-overview-metric-line .free,
+    .status-overview-metric-line .busy{
+      padding:5px 9px;
+    }
+    .station-status-card{
+      border-radius:18px;
+    }
+    .station-collapse>summary{
+      padding:12px 13px;
+    }
+    .station-summary-head{
+      gap:12px;
+    }
+    .station-summary-main{
+      gap:12px;
+      align-items:flex-start;
+    }
+    .station-summary-meta{
+      gap:8px;
+    }
+    .station-collapse-body{
+      padding:12px 13px 14px;
+    }
+    .station-status-head h4{
+      font-size:19px;
+      letter-spacing:-.015em;
+    }
+    .station-status-sub{
+      line-height:1.58;
+    }
+    .socket-grid{
+      gap:6px;
+    }
+    .socket-chip{
+      border-radius:14px;
+      padding:8px 5px 8px;
+      min-height:58px;
+    }
+    .socket-chip strong{
+      font-size:14px;
+    }
+    .socket-chip span{
+      font-size:11px;
+    }
+    .socket-chip small{
+      font-size:10px;
+      line-height:1.2;
+    }
+    @media (max-width:760px){
+      .hero-top{
+        align-items:flex-start;
+        gap:10px;
+      }
+      .hero-top>div{
+        gap:8px;
+      }
+      .hero-kicker{
+        font-size:11px;
+        padding:6px 10px;
+      }
+      .hero h1{
+        font-size:clamp(24px,8vw,32px);
+        max-width:9.5em;
+      }
+      .hero p{
+        font-size:13px;
+        line-height:1.68;
+      }
+      .station-head h3{
+        font-size:20px;
+      }
+      .order-item,
+      .recharge-item{
+        padding:15px 14px 14px;
+      }
+      .order-item h3,
+      .recharge-item h3{
+        font-size:17px;
+      }
+      .order-card-grid{
+        gap:7px;
+      }
+      .order-kv{
+        padding:9px 10px;
+      }
+      .status-content-header h3{
+        font-size:20px;
+      }
+      .station-collapse>summary{
+        padding:12px 13px;
+      }
+      .station-collapse-body{
+        padding:12px 13px 14px;
+      }
+      .page-tabs{
+        position:sticky;
+        left:auto;
+        right:auto;
+        top:8px;
+        bottom:auto;
+        z-index:30;
+        border-radius:20px;
+        grid-template-columns:repeat(5,minmax(0,1fr));
+        box-shadow:0 18px 32px rgba(15,23,42,.12);
+        background:rgba(255,255,255,.96);
+        backdrop-filter:blur(22px);
+      }
+      .body{
+        padding:8px 8px 16px;
+      }
+      .page-btn{
+        min-height:60px;
+        font-size:9px;
+        gap:4px;
+        padding:8px 2px 7px;
+        border-radius:14px;
+      }
+      .page-btn::before{
+        width:16px;
+        height:16px;
+        border-radius:6px;
+      }
+      .page-btn::after{
+        inset:auto 8px 4px;
       }
     }
     @media (prefers-reduced-motion:reduce){
@@ -630,7 +1308,19 @@
 </head>
 <body>
   <main class="shell">
-    <section class="hero"><div class="hero-top"><div><h1>实现充电自助</h1><p>支持实时查看充电桩使用状态，快速定位空闲桩，有余额的账户即可自助下单。</p></div><button id="logout-btn" class="secondary hero-logout hidden" type="button">退出登录</button></div><div id="hero-appbar" class="hero-appbar hidden"><div class="badge hero-badge"><div class="hero-summary"><span>账号 <strong id="user-phone">-</strong></span><span class="hero-dot"></span><span>余额 <strong id="user-balance">0.00</strong></span><span class="hero-dot"></span><span>次数 <strong id="user-free-charge">0</strong></span></div></div></div></section>
+    <section class="hero">
+      <div class="hero-compact">
+        <div class="hero-top">
+          <div>
+            <span class="hero-kicker">爱车和你都要记得充电</span>
+            <h1>充电桩自助充电</h1>
+            <p>平安出行 满电出发</p>
+          </div>
+          <button id="logout-btn" class="secondary hero-logout hidden" type="button">退出登录</button>
+        </div>
+        <div id="hero-appbar" class="hero-appbar hidden"><div class="badge hero-badge"><div class="hero-summary"><span>账号 <strong id="user-phone">-</strong></span><span class="hero-dot"></span><span>余额 <strong id="user-balance">0.00</strong></span><span class="hero-dot"></span><span>次数 <strong id="user-free-charge">0</strong></span></div></div></div>
+      </div>
+    </section>
     <section class="body">
       <div id="service-status-banner" class="status-box pending">正在检查接单状态...</div>
       <section id="auth-section" class="panel">
@@ -650,13 +1340,13 @@
       </section>
 
       <section id="app-section">
-        <div class="page-tabs"><button class="page-btn" data-page="order" data-login-required="1" type="button">立即下单</button><button class="page-btn" data-page="orders" data-login-required="1" type="button">我的订单</button><button class="page-btn active" data-page="status" type="button">站点状态</button><button class="page-btn" data-page="recharge" data-login-required="1" type="button">余额充值</button><button class="page-btn" data-page="ledger" data-login-required="1" type="button">消费记录</button></div>
+        <div class="page-tabs"><button class="page-btn" data-page="order" data-login-required="1" type="button">开始充电</button><button class="page-btn" data-page="orders" data-login-required="1" type="button">订单中心</button><button class="page-btn active" data-page="status" type="button">站点总览</button><button class="page-btn" data-page="recharge" data-login-required="1" type="button">账户充值</button><button class="page-btn" data-page="ledger" data-login-required="1" type="button">资金明细</button></div>
 
         <section id="page-order" class="panel hidden">
-          <div class="topbar" style="margin-bottom:12px"><div><h2 style="margin:0;font-size:22px">立即下单</h2><p class="hint">选择空闲站点，再确认插座和金额。请确认无误避免不必要的麻烦。</p></div><span class="badge">下单前会自动校验站点状态</span></div>
+          <div class="topbar" style="margin-bottom:12px"><div><h2 style="margin:0;font-size:22px">开始充电</h2><p class="hint">选站点、选插座、确认金额后即可提交。</p></div><span class="badge">提交前自动校验</span></div>
           <div class="order-main">
             <section class="order-section">
-              <div class="order-section-head"><div><h3 class="order-section-title">下单信息</h3><p class="order-section-desc">选择区域、站点、插座和充电金额，系统会自动处理故障与映射插座。</p></div></div>
+              <div class="order-section-head"><div><h3 class="order-section-title">本次充电</h3><p class="order-section-desc">若插座异常或存在映射，页面会自动提示。</p></div></div>
               <div class="grid-2">
                 <div class="field"><label for="region-select">选择区域</label><select id="region-select"></select></div>
                 <div class="field"><label for="station-select">选择站点</label><select id="station-select"></select></div>
@@ -686,19 +1376,34 @@
                 <div class="field"><label>充电金额</label><div id="amount-grid" class="amount-grid"></div><div class="hint" style="margin-top:8px;">每笔订单默认收取服务费 0.5 元；若你仍有免服务费次数，本次会自动抵扣。</div></div>
               </div>
             </section>
-            <div id="balance-hint" class="status-box">提示：账户余额充足时可直接下单；若当前接单服务离线，页面会明确提示是否可提交。</div>
-            <button id="submit-order-btn" type="button">立即下单充电</button>
+            <button id="submit-order-btn" type="button">确认并开始充电</button>
             <div id="order-status" class="status-box">等待下单...</div>
           </div>
         </section>
 
         <section id="page-orders" class="panel hidden">
-          <div class="topbar" style="margin-bottom:12px"><div><h2 style="margin:0;font-size:22px">我的订单</h2><p class="hint"> 展示订单具体信息，订单结束时返回明细。 </p></div><button id="refresh-orders-btn" class="secondary" type="button" style="width:auto">刷新订单</button></div>
+          <div class="topbar" style="margin-bottom:12px"><div><h2 style="margin:0;font-size:22px">订单中心</h2><p class="hint">查看进度、预计结束时间与官方明细。</p></div><button id="refresh-orders-btn" class="secondary" type="button" style="width:auto">刷新订单</button></div>
+          <div id="orders-help-note" class="order-help-note">
+            <details>
+              <summary>费用说明与服务支持</summary>
+              <div class="order-help-body">
+                <p>如对扣费、退款或订单明细有疑问，可通过页面提供的微信群联系服务支持。</p>
+                <p>夜间 00:00-07:00 设备停运离线；若订单跨天，预计结束时间会自动顺延到次日 07:00 后继续计算。</p>
+                <div id="orders-help-group" class="order-help-group hidden">
+                  <img id="orders-help-group-img" alt="微信群二维码" draggable="false">
+                  <div>
+                    <div class="hint">可加入微信群答疑</div>
+                    <div class="qr-note">长按识别二维码</div>
+                  </div>
+                </div>
+              </div>
+            </details>
+          </div>
           <div id="my-orders" class="order-list"></div>
         </section>
 
         <section id="page-status" class="panel">
-          <div class="topbar" style="margin-bottom:12px"><div><h2 style="margin:0;font-size:22px">站点状态</h2><p class="hint"> 实时空闲插座一览，充电不再盲目</p></div><button id="refresh-socket-overview-btn" class="secondary" type="button" style="width:auto">刷新状态</button></div>
+          <div class="topbar" style="margin-bottom:12px"><div><h2 style="margin:0;font-size:22px">站点总览</h2><p class="hint">先看空位，再决定去哪里充电。</p></div><button id="refresh-socket-overview-btn" class="secondary" type="button" style="width:auto">刷新状态</button></div>
           <div class="status-legend">
             <span class="legend-chip free">空闲</span>
             <span class="legend-chip busy">使用中</span>
@@ -708,29 +1413,11 @@
         </section>
 
         <section id="page-recharge" class="panel hidden">
-          <div class="topbar" style="margin-bottom:12px"><div><h2 style="margin:0;font-size:22px">余额充值</h2><p id="recharge-mode-hint" class="hint">页面会根据当前支付配置展示在线充值或扫码付款后审核到账。</p></div><button id="refresh-recharge-btn" class="secondary" type="button" style="width:auto">刷新记录</button></div>
+          <div class="topbar" style="margin-bottom:12px"><div><h2 style="margin:0;font-size:22px">账户充值</h2><p id="recharge-mode-hint" class="hint">支持在线充值，或扫码付款后审核到账。</p></div><button id="refresh-recharge-btn" class="secondary" type="button" style="width:auto">刷新记录</button></div>
           <div class="promo-board"><article class="promo-card"><strong>首充满 ¥5</strong><span>首笔成功充值满 5 元送 1 次免服务费；首充与单笔档位不叠加，按更高档位发放。</span></article><article class="promo-card"><strong>单笔充值礼包</strong><span>充 10 送 1 次，充 20 送 3 次，充 30 送 5 次；不跨单累计，不补差价追送。</span></article></div>
           <div id="recharge-method-grid" class="method-grid">
             <button id="method-alipay-auto" class="method-btn" type="button"><strong>支付宝在线充值</strong><span>若当前 XPay 商户已开通支付宝通道，支付成功后会自动补余额。</span></button>
             <button id="method-wechat-manual" class="method-btn active" type="button"><strong>微信充值</strong><span>根据当前通道自动切换为在线到账或人工审核到账。</span></button>
-          </div>
-          <div id="recharge-qr-wrap" class="qr-wrap hidden">
-            <div class="recharge-qr-stack">
-              <div class="recharge-qr-row">
-                <div class="qr-media"><img id="recharge-qr-img" alt="收款二维码" draggable="false"></div>
-                <div class="recharge-qr-copy">
-                  <div id="recharge-qr-note" class="hint"></div>
-                  <div class="qr-note">长按识别二维码</div>
-                </div>
-              </div>
-              <div id="recharge-group-wrap" class="recharge-qr-row hidden">
-                <div class="qr-media"><img id="recharge-group-img" alt="微信群二维码" draggable="false"></div>
-                <div class="recharge-qr-copy">
-                  <div class="hint">如需帮助可加微信群咨询</div>
-                  <div class="qr-note">长按识别二维码</div>
-                </div>
-              </div>
-            </div>
           </div>
           <div id="recharge-frame-wrap" class="hidden" style="margin:-2px 0 12px;">
             <iframe id="recharge-pay-frame" title="充值支付页面" style="width:100%;height:560px;border:1px solid #e5e7eb;border-radius:16px;background:#fff;"></iframe>
@@ -747,7 +1434,7 @@
         </section>
 
         <section id="page-ledger" class="panel hidden">
-          <div class="topbar" style="margin-bottom:12px"><div><h2 style="margin:0;font-size:22px">消费记录</h2><p class="hint"> 余额增加或扣除都会记录在这里 </p></div><button id="refresh-ledger-btn" class="secondary" type="button" style="width:auto">刷新记录</button></div>
+          <div class="topbar" style="margin-bottom:12px"><div><h2 style="margin:0;font-size:22px">资金明细</h2><p class="hint">所有余额变化都会记录在这里。</p></div><button id="refresh-ledger-btn" class="secondary" type="button" style="width:auto">刷新记录</button></div>
           <div id="my-wallet-ledger" class="recharge-list"></div>
         </section>
       </section>
@@ -831,7 +1518,7 @@
       heroAppbarEl.innerHTML=`<div class="hero-badge"><div class="hero-summary"><span>账号 <strong id="user-phone">-</strong></span><span class="hero-dot"></span><span>余额 <strong id="user-balance">0.00</strong></span><span class="hero-dot"></span><span>次数 <strong id="user-free-charge">0</strong></span></div></div>`;
     }
     const DEFAULT_RECHARGE_NOTE="建议备注手机号，方便核对到账";
-    const els={authSection:document.getElementById("auth-section"),appSection:document.getElementById("app-section"),authStatus:document.getElementById("auth-status"),orderStatus:document.getElementById("order-status"),serviceStatus:document.getElementById("service-status-banner"),heroAppbar:document.getElementById("hero-appbar"),pageTabs:document.querySelector(".page-tabs"),userPhone:document.getElementById("user-phone"),userBalance:document.getElementById("user-balance"),userFreeCharge:document.getElementById("user-free-charge"),regionSelect:document.getElementById("region-select"),stationSelect:document.getElementById("station-select"),stationCard:document.getElementById("station-card"),stationMetaGrid:document.getElementById("station-meta-grid"),stationDeviceMetric:document.getElementById("station-device-metric"),stationName:document.getElementById("station-name"),stationAddress:document.getElementById("station-address"),stationDeviceCode:document.getElementById("station-device-code"),stationSocketSummary:document.getElementById("station-socket-summary"),stationRegionBadge:document.getElementById("station-region-badge"),stationOrderability:document.getElementById("station-orderability"),socketSelect:document.getElementById("socket-select"),socketTip:document.getElementById("socket-tip"),amountGrid:document.getElementById("amount-grid"),submitOrderBtn:document.getElementById("submit-order-btn"),forgotPasswordLink:document.getElementById("forgot-password-link"),myOrders:document.getElementById("my-orders"),socketOverview:document.getElementById("socket-overview"),rechargeModeHint:document.getElementById("recharge-mode-hint"),methodAlipayAuto:document.getElementById("method-alipay-auto"),methodWechatManual:document.getElementById("method-wechat-manual"),rechargeStatus:document.getElementById("recharge-status"),rechargeAmount:document.getElementById("recharge-amount"),rechargeAmountHint:document.getElementById("recharge-amount-hint"),rechargeQrWrap:document.getElementById("recharge-qr-wrap"),rechargeQrImg:document.getElementById("recharge-qr-img"),rechargeQrNote:document.getElementById("recharge-qr-note"),rechargeGroupWrap:document.getElementById("recharge-group-wrap"),rechargeGroupImg:document.getElementById("recharge-group-img"),rechargeFrameWrap:document.getElementById("recharge-frame-wrap"),rechargePayFrame:document.getElementById("recharge-pay-frame"),rechargeOpenWrap:document.getElementById("recharge-open-wrap"),openRechargeLinkBtn:document.getElementById("open-recharge-link-btn"),submitRechargeBtn:document.getElementById("submit-recharge-btn"),myRecharges:document.getElementById("my-recharges"),myWalletLedger:document.getElementById("my-wallet-ledger"),manualPaymentModal:document.getElementById("manual-payment-modal"),closeManualPaymentBtn:document.getElementById("close-manual-payment-btn"),manualPaymentAmount:document.getElementById("manual-payment-amount"),manualPaymentNote:document.getElementById("manual-payment-note"),manualPaymentStatus:document.getElementById("manual-payment-status"),manualPriceDisplay:document.getElementById("manual-price-display"),manualPriceDesc:document.getElementById("manual-price-desc"),manualQrImg:document.getElementById("manual-qr-img"),manualPaymentGuide:document.getElementById("manual-payment-guide"),manualWechatGroupWrap:document.getElementById("manual-wechat-group-wrap"),manualWechatGroupImg:document.getElementById("manual-wechat-group-img"),submitManualPaymentBtn:document.getElementById("submit-manual-payment-btn"),orderPayModal:document.getElementById("order-pay-modal"),closeOrderPayBtn:document.getElementById("close-order-pay-btn"),orderPayAmount:document.getElementById("order-pay-amount"),orderPayStation:document.getElementById("order-pay-station"),orderPayQrImg:document.getElementById("order-pay-qr-img"),orderPayOpenWrap:document.getElementById("order-pay-open-wrap"),orderPayOpenBtn:document.getElementById("order-pay-open-btn"),orderPayStatus:document.getElementById("order-pay-status"),backToTopBtn:document.getElementById("back-to-top-btn")};
+    const els={authSection:document.getElementById("auth-section"),appSection:document.getElementById("app-section"),authStatus:document.getElementById("auth-status"),orderStatus:document.getElementById("order-status"),serviceStatus:document.getElementById("service-status-banner"),heroAppbar:document.getElementById("hero-appbar"),pageTabs:document.querySelector(".page-tabs"),userPhone:document.getElementById("user-phone"),userBalance:document.getElementById("user-balance"),userFreeCharge:document.getElementById("user-free-charge"),regionSelect:document.getElementById("region-select"),stationSelect:document.getElementById("station-select"),stationCard:document.getElementById("station-card"),stationMetaGrid:document.getElementById("station-meta-grid"),stationDeviceMetric:document.getElementById("station-device-metric"),stationName:document.getElementById("station-name"),stationAddress:document.getElementById("station-address"),stationDeviceCode:document.getElementById("station-device-code"),stationSocketSummary:document.getElementById("station-socket-summary"),stationRegionBadge:document.getElementById("station-region-badge"),stationOrderability:document.getElementById("station-orderability"),socketSelect:document.getElementById("socket-select"),socketTip:document.getElementById("socket-tip"),amountGrid:document.getElementById("amount-grid"),submitOrderBtn:document.getElementById("submit-order-btn"),forgotPasswordLink:document.getElementById("forgot-password-link"),myOrders:document.getElementById("my-orders"),ordersHelpNote:document.getElementById("orders-help-note"),ordersHelpGroup:document.getElementById("orders-help-group"),ordersHelpGroupImg:document.getElementById("orders-help-group-img"),socketOverview:document.getElementById("socket-overview"),rechargeModeHint:document.getElementById("recharge-mode-hint"),methodAlipayAuto:document.getElementById("method-alipay-auto"),methodWechatManual:document.getElementById("method-wechat-manual"),rechargeStatus:document.getElementById("recharge-status"),rechargeAmount:document.getElementById("recharge-amount"),rechargeAmountHint:document.getElementById("recharge-amount-hint"),rechargeFrameWrap:document.getElementById("recharge-frame-wrap"),rechargePayFrame:document.getElementById("recharge-pay-frame"),rechargeOpenWrap:document.getElementById("recharge-open-wrap"),openRechargeLinkBtn:document.getElementById("open-recharge-link-btn"),submitRechargeBtn:document.getElementById("submit-recharge-btn"),myRecharges:document.getElementById("my-recharges"),myWalletLedger:document.getElementById("my-wallet-ledger"),manualPaymentModal:document.getElementById("manual-payment-modal"),closeManualPaymentBtn:document.getElementById("close-manual-payment-btn"),manualPaymentAmount:document.getElementById("manual-payment-amount"),manualPaymentNote:document.getElementById("manual-payment-note"),manualPaymentStatus:document.getElementById("manual-payment-status"),manualPriceDisplay:document.getElementById("manual-price-display"),manualPriceDesc:document.getElementById("manual-price-desc"),manualQrImg:document.getElementById("manual-qr-img"),manualPaymentGuide:document.getElementById("manual-payment-guide"),manualWechatGroupWrap:document.getElementById("manual-wechat-group-wrap"),manualWechatGroupImg:document.getElementById("manual-wechat-group-img"),submitManualPaymentBtn:document.getElementById("submit-manual-payment-btn"),orderPayModal:document.getElementById("order-pay-modal"),closeOrderPayBtn:document.getElementById("close-order-pay-btn"),orderPayAmount:document.getElementById("order-pay-amount"),orderPayStation:document.getElementById("order-pay-station"),orderPayQrImg:document.getElementById("order-pay-qr-img"),orderPayOpenWrap:document.getElementById("order-pay-open-wrap"),orderPayOpenBtn:document.getElementById("order-pay-open-btn"),orderPayStatus:document.getElementById("order-pay-status"),backToTopBtn:document.getElementById("back-to-top-btn")};
     const state={token:localStorage.getItem(TOKEN_KEY)||localStorage.getItem(LEGACY_TOKEN_KEY)||"",user:null,stations:[],selectedRegion:"",selectedStation:null,selectedAmount:1,serviceInfo:null,paymentBridgeUrl:"",socketOverviewBridgeUrl:"",bridgePayTypes:["wxpay","alipay"],bridgeProvider:"",manualPaymentEnabled:false,manualPaymentQrUrl:"",manualPaymentContact:"",manualPaymentInstructions:"",manualPaymentReturnPage:"recharge",currentRechargeOpenUrl:"",rechargeMethod:"wechat_manual",socketRegions:[],selectedStatusRegion:"",loadedStatusRegions:{},statusRegionErrors:{},pollTimer:null,serviceTimer:null,rechargePollTimer:null,socketCountdownTimer:null,orderPayMode:"balance",codepayEnabled:false,orderPayTimer:null,currentPayId:"",currentPayUrl:"",pendingManualRecharge:null,rechargeSubmitting:false,activePage:"status",orderPollBusy:false,rechargePollBusy:false,orderPayPollBusy:false,serviceStatusBusy:false,socketOverviewBusy:false};
     const isMobileDevice=/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
     const pageButtons=[...document.querySelectorAll("[data-page]")];
@@ -845,8 +1532,11 @@
     const statusClass=(status)=>String(status||"").toUpperCase()||"PENDING";
     const statusLabel=(status)=>({SUCCESS:"成功",FAILED:"失败",PENDING:"待处理",PROCESSING:"处理中",APPROVED:"已通过",REJECTED:"已驳回"})[statusClass(status)]||String(status||"-");
     const normalizeStopReason=(text)=>{const normalized=String(text||"").trim();if(!normalized)return"";if(["过载","超出极限功率"].some((k)=>normalized.includes(k)))return"过载（超出极限功率）";if(["充满","已充满"].some((k)=>normalized.includes(k)))return"充满";if(["过充"].some((k)=>normalized.includes(k)))return"过充";if(["充电中断","中断结束"].some((k)=>normalized.includes(k)))return"充电中断";if(["被拔","充电被拔","拔出","枪被拔","插头被拔"].some((k)=>normalized.includes(k)))return"被拔出";if(normalized.includes("空载"))return"空载";if(["终止","手动","主动结束","用户结束","停止","关闭"].some((k)=>normalized.includes(k)))return"终止";if(["达到预定时间","达到预定时长","到达预定时间","达到设定时间","达到预约时间","工作完成","时间到","定时结束"].some((k)=>normalized.includes(k)))return"达到预定时长";return normalized};
+    const hasOfficialEndMarkers=(detail)=>{const d=detail&&typeof detail==="object"?detail:{};const endMessage=String(d.order_end_message||"").trim();const endPower=d.order_end_power;const endCode=d.order_end_code;const endTime=String(d.end_time||"").trim();const hasEndPower=endPower!==null&&endPower!==undefined&&String(endPower).trim()!==""&&Number(endPower)!==0;const hasEndCode=endCode!==null&&endCode!==undefined&&String(endCode).trim()!==""&&Number(endCode)!==0;const parsedEndTime=parseLooseDateTime(endTime);const endTimeReached=!!(parsedEndTime&&parsedEndTime.getTime()<=Date.now()+30000);return!!(endMessage||(endTimeReached&&(hasEndPower||hasEndCode)))};
+    const isRealtimeChargeActive=(status)=>["使用中","充电中"].includes(String(status||"").trim());
+    const isOrderActivelyCharging=(order)=>{const chargeStateUpper=String(order?.charge_state||"").toUpperCase();return isRealtimeChargeActive(order?.realtime_status)||chargeStateUpper==="CHARGING_LIVE"||chargeStateUpper==="CHARGING_ESTIMATED"};
     const stationShortCode=(name,socketNo)=>{const match=String(name||"").match(/(\d+)号站/);if(match&&socketNo)return`${match[1]}-${socketNo}`;if(match)return match[1];return""};
-    function renderOfficialDetail(o){const d=o?.official_detail||{};const hasDetail=d&&Object.keys(d).length>0;const msg=String(o?.official_message||"").trim();const hideMsg=/connection refused|errno 111|官方实时未查询到/i.test(msg);if(!hasDetail){return msg&&!hideMsg?`<p class="hint">官方明细：${escapeHtml(msg)}</p>`:""}const isEnded=["ENDED_ESTIMATED","ENDED_LIVE"].includes(String(o?.charge_state||""))||!!(o?.charge_finished_at||d.end_time||d.order_end_message||d.order_end_power);if(!isEnded)return"";const work=Number.isFinite(Number(d.work_time_minutes))?`${Number(d.work_time_minutes)} 分钟`:"-";const endPower=d.order_end_power!==null&&d.order_end_power!==undefined?`${Number(d.order_end_power)}W`:"-";const stopReason=normalizeStopReason(d.order_end_message);const startLine=d.start_time?`<p>开始时间：${escapeHtml(d.start_time)}</p>`:"";const endLine=d.end_time?`<p>结束时间：${escapeHtml(d.end_time)}</p>`:"";const reasonLine=stopReason?`<p>结束原因：${escapeHtml(stopReason)}</p>`:"";return `<details class="official-detail"><summary>官方明细</summary><div class="official-detail-body"><p>充电时长：${work}</p>${startLine}${endLine}${reasonLine}<p>官方订单编号：${escapeHtml(d.cid||"-")}</p><p>结束功率：${escapeHtml(endPower)}</p><p>支付方式：${escapeHtml(d.pay_way||"-")}</p></div></details>`}
+    function renderOfficialDetail(o){const d=o?.official_detail||{};const hasDetail=d&&Object.keys(d).length>0;const msg=String(o?.official_message||"").trim();const hideMsg=/connection refused|errno 111|官方实时未查询到/i.test(msg);if(!hasDetail){return msg&&!hideMsg?`<p class="hint">官方明细：${escapeHtml(msg)}</p>`:""}if(isOrderActivelyCharging(o))return"";const officialEnded=hasOfficialEndMarkers(d);if(!officialEnded)return"";const work=Number.isFinite(Number(d.work_time_minutes))?`${Number(d.work_time_minutes)} 分钟`:"-";const endPower=d.order_end_power!==null&&d.order_end_power!==undefined?`${Number(d.order_end_power)}W`:"-";const stopReason=normalizeStopReason(d.order_end_message);const officialFee=Number.isFinite(Number(d.total_fee))?`<p>本次消费：${formatYuan(d.total_fee)}</p>`:"";const startLine=d.start_time?`<p>开始时间：${escapeHtml(d.start_time)}</p>`:"";const endLine=d.end_time?`<p>结束时间：${escapeHtml(d.end_time)}</p>`:"";const reasonLine=stopReason?`<p>结束原因：${escapeHtml(stopReason)}</p>`:"";return `<details class="official-detail"><summary>官方明细</summary><div class="official-detail-body"><p>充电时长：${work}</p>${officialFee}${startLine}${endLine}${reasonLine}<p>官方订单编号：${escapeHtml(d.cid||"-")}</p><p>结束功率：${escapeHtml(endPower)}</p><p>支付方式：${escapeHtml(d.pay_way||"-")}</p></div></details>`}
     const escapeHtml=(value)=>String(value??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#39;");
     const socketTone=(status)=>({空闲:"free",使用中:"busy",充电中:"busy",故障:"fault",未查询到:"unknown",未知:"unknown"})[String(status||"").trim()]||"unknown";
     const rechargeMethodMeta={
@@ -871,20 +1561,22 @@
     function currentOrderTotal(){return Number((Number(state.selectedAmount||0)+serviceFeeForAmount(state.selectedAmount)).toFixed(2))}
     function updateUserSummary(user){if(!user)return;state.user=user;els.userBalance.textContent=Number(user.balance_yuan||0).toFixed(2);if(els.userFreeCharge)els.userFreeCharge.textContent=String(Number(user.free_charge_count||0))}
     async function syncCurrentUserSummary(){if(!state.user)return;try{updateUserSummary(await requestJson("/api/me"))}catch{}}
-    function orderChargeSummaryHtml(o){const amount=`¥${Number(o.amount_yuan||0).toFixed(2)}`;const total=`¥${Number(o.total_cost_yuan||o.amount_yuan).toFixed(2)}`;const feeValue=Number(o.free_charge_used||0)>0?`充电次数抵扣`: `¥${Number(o.service_fee_yuan||0).toFixed(2)}`;return `<div class="charge-summary"><div class="charge-summary-grid"><div class="charge-summary-item"><strong>充电金额</strong><span>${amount}</span></div><div class="charge-summary-item"><strong>服务费</strong><span>${feeValue}</span></div><div class="charge-summary-item total"><strong>合计</strong><span>${total}</span></div></div></div>`}
+    function formatYuan(value){return `¥${Number(value||0).toFixed(2)}`}
+    function orderChargeSummaryHtml(o){const amount=formatYuan(o.amount_yuan||0);const feeValue=Number(o.free_charge_used||0)>0?`已抵扣`: formatYuan(o.service_fee_yuan||0);return `<div class="charge-summary"><div class="charge-summary-grid"><div class="charge-summary-item"><strong>充电金额</strong><span>${amount}</span></div><div class="charge-summary-item"><strong>服务费</strong><span>${feeValue}</span></div></div></div>`}
+    function renderOrdersHelpNote(){if(!els.ordersHelpNote)return;const groupUrl=String(state.serviceInfo?.wechat_group_qr_url||"").trim();if(groupUrl&&els.ordersHelpGroup&&els.ordersHelpGroupImg){els.ordersHelpGroup.classList.remove("hidden");els.ordersHelpGroupImg.src=groupUrl}else if(els.ordersHelpGroup){els.ordersHelpGroup.classList.add("hidden")}}
     function openManualPaymentModal(amount=currentOrderTotal(),desc="用于购买当前这笔充电",returnPage=state.activePage||"recharge"){if(!state.manualPaymentEnabled||!state.manualPaymentQrUrl)return;state.manualPaymentReturnPage=returnPage||"recharge";els.manualPaymentAmount.value=Number(amount||0).toFixed(2);els.manualPriceDisplay.textContent=`¥${Number(amount||0).toFixed(2)}`;els.manualPriceDesc.textContent=desc;els.manualPaymentGuide.textContent=`${state.manualPaymentInstructions||"请先扫码完成付款。付款成功后，点击下方“我已付款，提交审核并返回”。"} 长按二维码可直接识别。`;els.manualQrImg.src=state.manualPaymentQrUrl;els.submitManualPaymentBtn.textContent="我已付款，提交审核并返回";setBox(els.manualPaymentStatus,"请先扫码付款，付款成功后再点击下方按钮返回提交审核。","pending");els.manualPaymentModal.classList.remove("hidden")}
     function closeManualPaymentModal(){els.manualPaymentModal.classList.add("hidden");state.manualPaymentReturnPage=state.activePage||"recharge"}
     function openOrderPayModal({payUrl="",qrUrl="",amount=0,stationLabel=""}={}){els.orderPayAmount.textContent=`¥${Number(amount||0).toFixed(2)}`;els.orderPayStation.textContent=stationLabel||"-";els.orderPayQrImg.src=qrUrl||"";state.currentPayUrl=String(payUrl||"").trim();if(state.currentPayUrl){els.orderPayOpenWrap.classList.remove("hidden")}else{els.orderPayOpenWrap.classList.add("hidden")}setBox(els.orderPayStatus,"等待微信支付确认...");els.orderPayModal.classList.remove("hidden")}
     function closeOrderPayModal(){els.orderPayModal.classList.add("hidden");if(state.orderPayTimer){clearInterval(state.orderPayTimer);state.orderPayTimer=null}}
     async function pollOrderPayment(payId){if(!payId)return;clearInterval(state.orderPayTimer);state.orderPayTimer=setInterval(async()=>{if(state.orderPayPollBusy)return;state.orderPayPollBusy=true;try{const resp=await requestJson(`/api/payment/status/${payId}`);if(resp.status==="PAID"&&resp.charge_order_id){clearInterval(state.orderPayTimer);state.orderPayTimer=null;setBox(els.orderPayStatus,`支付成功，订单 #${resp.charge_order_id} 已创建，正在处理...`,"ok");closeOrderPayModal();setBox(els.orderStatus,`订单已创建（#${resp.charge_order_id}），正在处理...`,"pending");await loadMyOrders();pollOrder(resp.charge_order_id)}}catch(err){setBox(els.orderPayStatus,`支付查询失败：${err.message}`,"fail")}finally{state.orderPayPollBusy=false}},6000)}
-    function renderManualPaymentPanels(){const hasManual=state.manualPaymentEnabled&&!!state.manualPaymentQrUrl;if(hasManual){els.rechargeQrWrap.classList.remove("hidden");els.rechargeQrImg.src=state.manualPaymentQrUrl;els.rechargeQrNote.innerHTML=`${escapeHtml(state.manualPaymentInstructions||"请先扫码付款，付款成功后再提交审核。")}`;els.rechargeFrameWrap.classList.add("hidden");els.rechargeOpenWrap.classList.add("hidden");els.methodAlipayAuto.classList.add("hidden");els.methodWechatManual.classList.add("hidden");els.rechargeModeHint.textContent="充值流程：点击按钮弹出二维码，付款成功后点击“我已付款，提交审核并返回”；审核通过后余额到账。";if(els.rechargeAmountHint)els.rechargeAmountHint.textContent="先输入本次金额，再点下方按钮弹出付款二维码；付款成功后在弹窗里提交审核。"}}
+    function renderManualPaymentPanels(){const hasManual=state.manualPaymentEnabled&&!!state.manualPaymentQrUrl;if(hasManual){els.rechargeFrameWrap.classList.add("hidden");els.rechargeOpenWrap.classList.add("hidden");els.methodAlipayAuto.classList.add("hidden");els.methodWechatManual.classList.add("hidden");els.rechargeModeHint.textContent="充值流程：点击按钮弹出二维码，付款成功后点击“我已付款，提交审核并返回”；审核通过后余额到账。";if(els.rechargeAmountHint)els.rechargeAmountHint.textContent="先输入本次金额，再点下方按钮弹出付款二维码；付款成功后在弹窗里提交审核。"}}
     async function loadBridgeCapabilities(){const bridge=String(state.paymentBridgeUrl||"").trim().replace(/\/$/,"");if(!bridge){state.bridgePayTypes=["wxpay","alipay"];state.bridgeProvider="";ensureRechargeMethodSupported();applyRechargeMethodUi();return}try{const resp=await fetch(`${bridge}/api/health`);const text=await resp.text();const data=text?JSON.parse(text):{};if(!resp.ok)throw new Error(data.detail||`bridge health ${resp.status}`);state.bridgePayTypes=Array.isArray(data.pay_types)&&data.pay_types.length?data.pay_types:["wxpay","alipay"];state.bridgeProvider=String(data.provider||"").trim()}catch{state.bridgePayTypes=["wxpay"];state.bridgeProvider=""}ensureRechargeMethodSupported();applyRechargeMethodUi()}
     function defaultRechargeSubmitText(){if(state.manualPaymentEnabled)return"提交审核并去付款";const meta=rechargeMethodMeta[state.rechargeMethod]||rechargeMethodMeta.wechat_manual;return state.paymentBridgeUrl?meta.button:"提交充值申请"}
     function isManualReviewPaymentMethod(method){const normalized=String(method||"").trim().toLowerCase();return !!normalized&&!normalized.endsWith("_auto")}
     function currentPendingManualRecharge(){const row=state.pendingManualRecharge;if(!row)return null;return String(row.status||"").toUpperCase()==="PENDING"&&isManualReviewPaymentMethod(row.payment_method)?row:null}
     function pendingManualRechargeMessage(row){return`你已有待审核充值申请（#${row.id}，¥${Number(row.amount_yuan||0).toFixed(2)}），请等待人工审核，无需重复提交。`}
     function syncRechargeSubmitState(){const pending=currentPendingManualRecharge();const needsLogin=!state.user;const locked=needsLogin||state.rechargeSubmitting||!!pending;els.submitRechargeBtn.disabled=locked;els.rechargeAmount.disabled=locked;els.submitRechargeBtn.textContent=needsLogin?"登录后可充值":(state.rechargeSubmitting?"提交中...":(pending?"已有待审核，请等待":defaultRechargeSubmitText()));els.submitManualPaymentBtn.disabled=locked;els.submitManualPaymentBtn.textContent=needsLogin?"登录后可提交":(state.rechargeSubmitting?"提交中...":(pending?"已有待审核，请等待":"我已付款，提交审核并返回"));els.manualPaymentAmount.disabled=locked;els.manualPaymentNote.disabled=locked;if(pending&&!state.rechargeSubmitting){const message=pendingManualRechargeMessage(pending);setBox(els.rechargeStatus,message,"pending");setBox(els.manualPaymentStatus,message,"pending")}}
-    function applyRechargeMethodUi(){if(state.manualPaymentEnabled){renderManualPaymentPanels();if(!state.currentRechargeOpenUrl){els.rechargeFrameWrap.classList.add("hidden");els.rechargeOpenWrap.classList.add("hidden")}syncRechargeSubmitState();return}ensureRechargeMethodSupported();const meta=rechargeMethodMeta[state.rechargeMethod]||rechargeMethodMeta.wechat_manual;const allowed=new Set(getAllowedRechargeMethods());els.methodAlipayAuto.classList.toggle("hidden",state.paymentBridgeUrl&&!allowed.has("alipay_auto"));els.methodWechatManual.classList.toggle("hidden",state.paymentBridgeUrl&&!allowed.has("wechat_manual"));els.methodAlipayAuto.classList.toggle("active",state.rechargeMethod==="alipay_auto");els.methodWechatManual.classList.toggle("active",state.rechargeMethod==="wechat_manual");const providerName=state.bridgeProvider?`${state.bridgeProvider} `:"";const hintSuffix=state.paymentBridgeUrl?` 当前通道：${[...allowed].map((key)=>rechargeMethodMeta[key]?.payType==="alipay"?"支付宝":"微信").join(" / ")}。`:"";els.rechargeModeHint.textContent=`${providerName}${meta.hint}${hintSuffix}`.trim();if(els.rechargeAmountHint)els.rechargeAmountHint.textContent=state.paymentBridgeUrl?"创建支付后按页面提示完成付款，到账状态会自动同步。":"如需补余额，请联系管理员。";if(!state.currentRechargeOpenUrl){els.rechargeQrWrap.classList.add("hidden");els.rechargeFrameWrap.classList.add("hidden");els.rechargeOpenWrap.classList.add("hidden")}syncRechargeSubmitState()}
+    function applyRechargeMethodUi(){if(state.manualPaymentEnabled){renderManualPaymentPanels();if(!state.currentRechargeOpenUrl){els.rechargeFrameWrap.classList.add("hidden");els.rechargeOpenWrap.classList.add("hidden")}syncRechargeSubmitState();return}ensureRechargeMethodSupported();const meta=rechargeMethodMeta[state.rechargeMethod]||rechargeMethodMeta.wechat_manual;const allowed=new Set(getAllowedRechargeMethods());els.methodAlipayAuto.classList.toggle("hidden",state.paymentBridgeUrl&&!allowed.has("alipay_auto"));els.methodWechatManual.classList.toggle("hidden",state.paymentBridgeUrl&&!allowed.has("wechat_manual"));els.methodAlipayAuto.classList.toggle("active",state.rechargeMethod==="alipay_auto");els.methodWechatManual.classList.toggle("active",state.rechargeMethod==="wechat_manual");const providerName=state.bridgeProvider?`${state.bridgeProvider} `:"";const hintSuffix=state.paymentBridgeUrl?` 当前通道：${[...allowed].map((key)=>rechargeMethodMeta[key]?.payType==="alipay"?"支付宝":"微信").join(" / ")}。`:"";els.rechargeModeHint.textContent=`${providerName}${meta.hint}${hintSuffix}`.trim();if(els.rechargeAmountHint)els.rechargeAmountHint.textContent=state.paymentBridgeUrl?"创建支付后按页面提示完成付款，到账状态会自动同步。":"如需补余额，请联系管理员。";if(!state.currentRechargeOpenUrl){els.rechargeFrameWrap.classList.add("hidden");els.rechargeOpenWrap.classList.add("hidden")}syncRechargeSubmitState()}
     const STATUS_REGION_ORDER=["综合楼","东盟","学术交流中心","19栋女生宿舍"];
     const statusRegionLabel=(raw)=>({综合楼:"综合楼",图书馆:"综合楼","综合楼/图书馆":"综合楼",东盟一号:"东盟",东盟:"东盟",学术交流中心:"学术交流中心","19栋":"19栋女生宿舍","19栋宿舍":"19栋女生宿舍","19栋女生宿舍":"19栋女生宿舍"})[String(raw||"").trim()]||String(raw||"未分区");
     const statusRegionApiLabel=(key)=>({"综合楼":"图书馆",图书馆:"图书馆",东盟:"东盟一号",学术交流中心:"学术交流中心","19栋女生宿舍":"19栋宿舍","19栋宿舍":"19栋宿舍"})[String(key||"").trim()]||String(key||"");
@@ -913,16 +1605,58 @@
     function renderStations(){const list=regionStations();if(!list.length){els.stationSelect.innerHTML='<option value="">当前区域暂无站点</option>';state.selectedStation=null;renderSelectedStation();return}state.selectedStation=list.find((x)=>x.id===els.stationSelect.value)||list[0];els.stationSelect.innerHTML=list.map((x)=>`<option value="${x.id}">${displayStationText(x.name)||x.name}${stationCanOrder(x)?"":"（待补编码）"}</option>`).join("");els.stationSelect.value=state.selectedStation.id;renderSelectedStation()}
     function renderSelectedStation(){if(!state.selectedStation){els.stationCard.classList.add("hidden");els.socketSelect.innerHTML='<option value="">暂无可用插座</option>';els.socketTip.classList.add("hidden");updateSubmitOrderButton();return}const disabled=new Set((state.selectedStation.disabled_sockets||[]).map(Number));const remapCount=Object.keys(state.selectedStation.socket_remap||{}).length;const orderEnabled=stationCanOrder(state.selectedStation);els.stationCard.classList.remove("hidden");els.stationRegionBadge.textContent=state.selectedStation.region||"未分区";els.stationName.textContent=conciseStationName(state.selectedStation.name);els.stationAddress.textContent="";els.stationAddress.classList.add("hidden");els.stationDeviceMetric.classList.add("hidden");els.stationMetaGrid.style.gridTemplateColumns="1fr";els.stationDeviceCode.textContent=orderEnabled?state.selectedStation.device_code:"待补充";els.stationOrderability.textContent=orderEnabled?"正常":"暂不可用";els.stationOrderability.className=`station-order-pill ${orderEnabled?"ready":"waiting"}`;els.stationSocketSummary.textContent=orderEnabled?(disabled.size?`共 ${state.selectedStation.socket_count} 个，故障 ${disabled.size} 个`:`共 ${state.selectedStation.socket_count} 个，目前未标记故障`)+`${remapCount?`，映射 ${remapCount} 个，已自动按实际通电下单`:""}`:`共 ${state.selectedStation.socket_count} 个，已录入站点信息，待补设备编码后可下单`;els.socketSelect.innerHTML=Array.from({length:Number(state.selectedStation.socket_count||10)},(_,i)=>{const no=i+1;return`<option value="${no}" ${disabled.has(no)?"disabled":""}>${socketDisplayLabel(state.selectedStation,no)}${disabled.has(no)?"（故障）":""}</option>`}).join("");const first=[...els.socketSelect.options].find((x)=>!x.disabled);if(first)els.socketSelect.value=first.value;renderSocketTip();updateSubmitOrderButton()}
     function renderSocketTip(){if(!state.selectedStation)return;const disabled=(state.selectedStation.disabled_sockets||[]).length;const selectedNo=Number(els.socketSelect.value||0);const actual=selectedNo?actualSocketNo(state.selectedStation,selectedNo):0;if(!stationCanOrder(state.selectedStation)){els.socketTip.textContent="该站点已补入列表，但尚未录入设备编码，暂不可下单。";els.socketTip.classList.remove("hidden")}else if(selectedNo&&actual&&actual!==selectedNo){els.socketTip.textContent=`当前选择 ${selectedNo} 号插座，系统会按实际通电的 ${actual} 号插座下单。`;els.socketTip.classList.remove("hidden")}else if(disabled){els.socketTip.textContent=`该站点有 ${disabled} 个故障插座，列表中已自动标记。`;els.socketTip.classList.remove("hidden")}else els.socketTip.classList.add("hidden")}
-    function renderServiceStatus(info){state.serviceInfo=info;state.paymentBridgeUrl=String(info.payment_bridge_url||"").trim();state.socketOverviewBridgeUrl=String(info.socket_overview_bridge_url||"").trim()||state.paymentBridgeUrl;state.manualPaymentEnabled=!!info.manual_recharge_enabled&&!state.paymentBridgeUrl;state.manualPaymentQrUrl=String(info.payment_qr_url||"").trim();state.manualPaymentContact=String(info.manual_payment_contact||"").trim();state.manualPaymentInstructions=String(info.manual_payment_instructions||info.recharge_qr_note||"").trim();state.orderPayMode=String(info.order_pay_mode||"balance").trim().toLowerCase();state.codepayEnabled=!!info.codepay_enabled;const wechatGroup=String(info.wechat_group_qr_url||"").trim();if(wechatGroup){els.rechargeGroupWrap.classList.remove("hidden");els.rechargeGroupImg.src=wechatGroup;els.manualWechatGroupWrap.classList.remove("hidden");els.manualWechatGroupImg.src=wechatGroup}else{els.rechargeGroupWrap.classList.add("hidden");els.manualWechatGroupWrap.classList.add("hidden")}const paymentLabel=state.manualPaymentEnabled?"扫码付款后通过审核到账":(state.paymentBridgeUrl?"在线充值自动到账":"当前未开放自助充值");const socketOnline=!!info.socket_service_online;const orderOnline=!!info.accepting_orders;const socketSeen=fmt(info.socket_service_last_seen_at||info.agent_last_seen_at);let line1="";let tone="fail";if(socketOnline&&orderOnline){line1="站点状态在线，接单服务在线，可自助下单。";tone="ok"}else if(socketOnline&&info.allow_order_submission){line1="站点状态在线，接单服务离线，当前仍允许提交订单。";tone="pending"}else if(socketOnline){line1="站点状态在线，接单服务离线，暂不接受新订单。";tone="pending"}else if(orderOnline&&info.allow_order_submission){line1="站点状态离线，接单服务在线，可提交订单。";tone="pending"}else{line1="当前仅开放站点状态查看，暂不接受新订单。";tone="fail"}setBox(els.serviceStatus,`${line1}\n最近同步：${socketSeen}`,tone);updateSubmitOrderButton();loadBridgeCapabilities();if(!state.manualPaymentEnabled&&!state.paymentBridgeUrl){els.rechargeQrWrap.classList.add("hidden");els.rechargeFrameWrap.classList.add("hidden");els.rechargeOpenWrap.classList.add("hidden")}if(state.paymentBridgeUrl&&!state.currentRechargeOpenUrl&&!state.manualPaymentEnabled){els.rechargeQrWrap.classList.add("hidden");els.rechargeFrameWrap.classList.add("hidden");els.rechargeOpenWrap.classList.add("hidden")}}
-    async function loadServiceStatus(){if(state.serviceStatusBusy)return;state.serviceStatusBusy=true;try{renderServiceStatus(await requestJson("/api/health"))}catch(err){state.serviceInfo=null;updateSubmitOrderButton();setBox(els.serviceStatus,`接单状态获取失败：${err.message}`,"fail")}finally{state.serviceStatusBusy=false}}
+    function renderServiceStatus(info){state.serviceInfo=info;state.paymentBridgeUrl=String(info.payment_bridge_url||"").trim();state.socketOverviewBridgeUrl=String(info.socket_overview_bridge_url||"").trim()||state.paymentBridgeUrl;state.manualPaymentEnabled=!!info.manual_recharge_enabled&&!state.paymentBridgeUrl;state.manualPaymentQrUrl=String(info.payment_qr_url||"").trim();state.manualPaymentContact=String(info.manual_payment_contact||"").trim();state.manualPaymentInstructions=String(info.manual_payment_instructions||info.recharge_qr_note||"").trim();state.orderPayMode=String(info.order_pay_mode||"balance").trim().toLowerCase();state.codepayEnabled=!!info.codepay_enabled;const wechatGroup=String(info.wechat_group_qr_url||"").trim();if(wechatGroup){els.manualWechatGroupWrap.classList.remove("hidden");els.manualWechatGroupImg.src=wechatGroup}else{els.manualWechatGroupWrap.classList.add("hidden")}renderOrdersHelpNote();const paymentLabel=state.manualPaymentEnabled?"扫码付款后通过审核到账":(state.paymentBridgeUrl?"在线充值自动到账":"当前未开放自助充值");const socketOnline=!!info.socket_service_online;const orderOnline=!!info.accepting_orders;const socketSeen=fmt(info.socket_service_last_seen_at||info.agent_last_seen_at);let line1="";let tone="fail";if(socketOnline&&orderOnline){line1="站点与下单服务均正常，可直接自助充电。";tone="ok"}else if(socketOnline&&info.allow_order_submission){line1="站点状态正常，服务通道短时波动，当前仍可提交订单。";tone="pending"}else if(socketOnline){line1="站点状态正常，但下单服务暂未恢复，请稍后再试。";tone="pending"}else if(orderOnline&&info.allow_order_submission){line1="站点状态同步稍有延迟，当前仍可尝试提交订单。";tone="pending"}else{line1="当前仅开放站点查看，新订单暂不可提交。";tone="fail"}setBox(els.serviceStatus,`${line1}\n最近同步：${socketSeen}`,tone);updateSubmitOrderButton();loadBridgeCapabilities();if(!state.manualPaymentEnabled&&!state.paymentBridgeUrl){els.rechargeFrameWrap.classList.add("hidden");els.rechargeOpenWrap.classList.add("hidden")}if(state.paymentBridgeUrl&&!state.currentRechargeOpenUrl&&!state.manualPaymentEnabled){els.rechargeFrameWrap.classList.add("hidden");els.rechargeOpenWrap.classList.add("hidden")}}
+    async function loadServiceStatus(){if(state.serviceStatusBusy)return;state.serviceStatusBusy=true;try{renderServiceStatus(await requestJson("/api/health"))}catch(err){state.serviceInfo=null;renderOrdersHelpNote();updateSubmitOrderButton();setBox(els.serviceStatus,`接单状态获取失败：${err.message}`,"fail")}finally{state.serviceStatusBusy=false}}
     async function loadStations(){state.stations=await requestJson("/api/stations");state.loadedStatusRegions={};state.statusRegionErrors={};state.socketRegions=buildStatusRegionCatalog(state.stations);if(!state.socketRegions.some((group)=>group.key===state.selectedStatusRegion))state.selectedStatusRegion=state.socketRegions[0]?.key||"";renderRegions();if(state.activePage==="status"||!state.user)loadSocketOverview()}
     function setLoggedIn(user,token){state.user=user;state.token=token;state.pendingManualRecharge=null;localStorage.setItem(TOKEN_KEY,token);localStorage.setItem(LEGACY_TOKEN_KEY,token);const cachedPending=loadPendingRecharge();if(cachedPending&&!pendingRechargeBelongsToUser(cachedPending,user))clearPendingRecharge();els.userPhone.textContent=user.phone;els.userBalance.textContent=Number(user.balance_yuan||0).toFixed(2);if(els.userFreeCharge)els.userFreeCharge.textContent=String(Number(user.free_charge_count||0));els.authSection.classList.add("hidden");els.heroAppbar.classList.remove("hidden");document.getElementById("logout-btn").classList.remove("hidden");syncPageAccess();setActivePage("order");updateSubmitOrderButton();syncRechargeSubmitState()}
     function clearLoginState(){state.user=null;state.token="";state.pendingManualRecharge=null;state.rechargeSubmitting=false;localStorage.removeItem(TOKEN_KEY);localStorage.removeItem(LEGACY_TOKEN_KEY);els.authSection.classList.remove("hidden");els.heroAppbar.classList.add("hidden");document.getElementById("logout-btn").classList.add("hidden");els.userBalance.textContent="0.00";if(els.userFreeCharge)els.userFreeCharge.textContent="0";setBox(els.authStatus,"游客可先查看站点和空闲状态，登录后再下单、充值和查看个人记录。");setBox(els.orderStatus,"等待下单...");setBox(els.rechargeStatus,"付款后只需提交一次，请勿重复点击。");setBox(els.manualPaymentStatus,"登录后可提交付款审核。");closeManualPaymentModal();closeOrderPayModal();syncPageAccess();setActivePage("status");updateSubmitOrderButton();syncRechargeSubmitState()}
     async function bootstrapAuth(){if(!state.token)return;try{const user=await requestJson("/api/me");setLoggedIn(user,state.token);await Promise.all([loadStations(),loadMyOrders(),loadMyRecharges(),loadMyWalletLedger()])}catch{clearLoginState()}}
     async function createWechatPayOrder(){if(!state.codepayEnabled)throw new Error("微信支付通道未启用");const selectedSocketNo=Number(els.socketSelect.value);const actualNo=actualSocketNo(state.selectedStation,selectedSocketNo);const payload={station_name:state.selectedStation.name,device_code:state.selectedStation.device_code,socket_no:actualNo,amount_yuan:state.selectedAmount,remark:"",pay_type:2};const resp=await requestJson("/api/payment/create",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});const payValue=resp.pay_url||resp.qrcode||"";const qrSrc=qrImageUrl(payValue);const stationLabel=`${displayStationText(state.selectedStation.name)||state.selectedStation.name} ${socketDisplayLabel(state.selectedStation,selectedSocketNo)}`;openOrderPayModal({payUrl:resp.pay_url||"",qrUrl:qrSrc,amount:resp.amount||serviceFeeForAmount(state.selectedAmount),stationLabel});state.currentPayId=resp.pay_id||"";setBox(els.orderStatus,"已创建微信支付，请完成付款后自动下单。","pending");await loadMyOrders();await pollOrderPayment(state.currentPayId)}
-    async function createOrder(){if(!state.user)throw new Error("请先登录后再下单");if(!state.selectedStation)throw new Error("请先选择站点");if(!stationCanOrder(state.selectedStation))throw new Error("该站点尚未录入设备编码，暂不可下单");if(state.serviceInfo&&!state.serviceInfo.allow_order_submission)throw new Error("当前仅开放站点状态查看，请稍后再试");const opt=els.socketSelect.selectedOptions[0];if(!opt||opt.disabled)throw new Error("当前插座已标记故障，请换一个插座");const selectedSocketNo=Number(els.socketSelect.value);const actualNo=actualSocketNo(state.selectedStation,selectedSocketNo);const fee=serviceFeeForAmount(state.selectedAmount);const total=currentOrderTotal().toFixed(2);const payMode=state.orderPayMode==="wechat"?"wechat":"balance";const stationName=displayStationText(state.selectedStation.name)||state.selectedStation.name;const socketLine=actualNo!==selectedSocketNo?`${selectedSocketNo}号（实际通电${actualNo}号）`:`${selectedSocketNo}号`;const confirmText=payMode==="wechat"?`确认下单？\n站点：${stationName}\n插座：${socketLine}\n充电金额：¥${Number(state.selectedAmount).toFixed(2)}\n服务费：¥${Number(fee).toFixed(2)}\n\n将跳转微信支付服务费，支付成功后自动下单。`: `确认下单？\n站点：${stationName}\n插座：${socketLine}\n充电金额：¥${Number(state.selectedAmount).toFixed(2)}\n服务费：¥${Number(fee).toFixed(2)}\n预计合计：¥${total}\n\n若订单失败，余额会自动退回。`;if(!window.confirm(confirmText))return;try{if(payMode==="wechat"){await createWechatPayOrder();return}const order=await requestJson("/api/orders",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({station_id:state.selectedStation.id,station_name:state.selectedStation.name,device_code:state.selectedStation.device_code,socket_no:actualNo,amount_yuan:state.selectedAmount,remark:"",payment_token:""})});try{const me=await requestJson("/api/me");state.user=me;els.userBalance.textContent=Number(me.balance_yuan||0).toFixed(2);if(els.userFreeCharge)els.userFreeCharge.textContent=String(Number(me.free_charge_count||0))}catch{}setBox(els.orderStatus,`订单已创建（#${order.id}），正在处理...`,"pending");await loadMyOrders();pollOrder(order.id)}catch(err){if(state.manualPaymentEnabled&&String(err.message||"").includes("余额不足")){openManualPaymentModal(currentOrderTotal(),"用于购买当前这笔充电","order");setBox(els.orderStatus,"余额不足，已为你打开充值弹窗。请先扫码付款，付款后点击“我已付款，提交审核并返回”。","pending");return}throw err}}
+    async function createOrder(){if(!state.user)throw new Error("请先登录后再下单");if(!state.selectedStation)throw new Error("请先选择站点");if(!stationCanOrder(state.selectedStation))throw new Error("该站点尚未录入设备编码，暂不可下单");if(state.serviceInfo&&!state.serviceInfo.allow_order_submission)throw new Error("当前仅开放站点查看，请稍后再试");const opt=els.socketSelect.selectedOptions[0];if(!opt||opt.disabled)throw new Error("当前插座暂不可用，请更换其他插座");const selectedSocketNo=Number(els.socketSelect.value);const actualNo=actualSocketNo(state.selectedStation,selectedSocketNo);const fee=serviceFeeForAmount(state.selectedAmount);const total=currentOrderTotal().toFixed(2);const payMode=state.orderPayMode==="wechat"?"wechat":"balance";const stationName=displayStationText(state.selectedStation.name)||state.selectedStation.name;const socketLine=actualNo!==selectedSocketNo?`${selectedSocketNo}号（实际通电${actualNo}号）`:`${selectedSocketNo}号`;const confirmText=payMode==="wechat"?`确认提交本次充电？\n站点：${stationName}\n插座：${socketLine}\n充电金额：¥${Number(state.selectedAmount).toFixed(2)}\n服务费：¥${Number(fee).toFixed(2)}\n\n将跳转微信完成支付，支付成功后自动创建订单。`: `确认提交本次充电？\n站点：${stationName}\n插座：${socketLine}\n充电金额：¥${Number(state.selectedAmount).toFixed(2)}\n服务费：¥${Number(fee).toFixed(2)}\n预计合计：¥${total}\n\n若订单未成功创建，余额会自动退回。`;if(!window.confirm(confirmText))return;try{if(payMode==="wechat"){await createWechatPayOrder();return}const order=await requestJson("/api/orders",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({station_id:state.selectedStation.id,station_name:state.selectedStation.name,device_code:state.selectedStation.device_code,socket_no:actualNo,amount_yuan:state.selectedAmount,remark:"",payment_token:""})});try{const me=await requestJson("/api/me");state.user=me;els.userBalance.textContent=Number(me.balance_yuan||0).toFixed(2);if(els.userFreeCharge)els.userFreeCharge.textContent=String(Number(me.free_charge_count||0))}catch{}setBox(els.orderStatus,`订单已创建（#${order.id}），正在处理...`,"pending");await loadMyOrders();pollOrder(order.id)}catch(err){if(state.manualPaymentEnabled&&String(err.message||"").includes("余额不足")){openManualPaymentModal(currentOrderTotal(),"用于购买当前这笔充电","order");setBox(els.orderStatus,"当前余额不足，已为你打开充值弹窗。请先完成付款，再点击“我已付款，提交审核并返回”。","pending");return}throw err}}
     function pollOrder(id){clearInterval(state.pollTimer);state.pollTimer=setInterval(async()=>{if(state.orderPollBusy)return;state.orderPollBusy=true;try{const order=await requestJson(`/api/orders/${id}`);setBox(els.orderStatus,`订单 #${order.id} | 状态：${order.status} | 结果：${order.result_message||"处理中"}`,"pending");if(order.status==="SUCCESS"||order.status==="FAILED"){clearInterval(state.pollTimer);state.pollTimer=null;const me=await requestJson("/api/me");state.user=me;els.userBalance.textContent=Number(me.balance_yuan||0).toFixed(2);if(els.userFreeCharge)els.userFreeCharge.textContent=String(Number(me.free_charge_count||0));if(order.status==="SUCCESS"){setBox(els.orderStatus,`订单 #${order.id} 成功，平台单号：${order.vendor_order_id||"无"}`,"ok")}else{setBox(els.orderStatus,`订单 #${order.id} 失败，原因：${order.result_message||"未知"}`,"fail")}await loadMyOrders();await loadMyWalletLedger()}}catch(err){clearInterval(state.pollTimer);state.pollTimer=null;setBox(els.orderStatus,`轮询失败：${err.message}`,"fail")}finally{state.orderPollBusy=false}},6000)}
-    async function loadMyOrders(){if(!state.user){els.myOrders.innerHTML='<div class="empty">登录后可查看自己的订单记录。</div>';return}try{const rows=await requestJson("/api/me/orders?limit=50");await syncCurrentUserSummary();const chargeStateLabel={CHARGING_LIVE:"实时充电中",CHARGING_ESTIMATED:"预计充电中",ENDED_ESTIMATED:"已结束",ENDED_LIVE:"已结束",PROCESSING:"处理中",PENDING:"待处理",FAILED:"失败"};els.myOrders.innerHTML=rows.length?rows.map((o)=>{const shortCode=stationShortCode(o.station_name,o.socket_no);const slotLabel=shortCode||(o.device_code?`${o.device_code}-${o.socket_no}`:`${o.socket_no}号`);const stopReason=normalizeStopReason(o.charge_stop_reason);const official=o.official_detail||{};const hasOfficial=official&&Object.keys(official).length>0;const realtimeEnded=String(o.realtime_status||"").trim()==="空闲";const statusUpper=String(o.status||"").toUpperCase();const derivedEnded=statusUpper!=="FAILED"&&!!(o.charge_finished_at||official.end_time||official.order_end_message||official.order_end_power||stopReason||realtimeEnded);const isCharging=!derivedEnded&&["CHARGING_LIVE","CHARGING_ESTIMATED","PROCESSING","PENDING"].includes(String(o.charge_state||""));const displayState=derivedEnded?"已结束":(chargeStateLabel[o.charge_state]||"-");const officialWork=Number(official.work_time_minutes);const durationLine=Number.isFinite(officialWork)?`<p>充电时长：${officialWork} 分钟</p>`:Number(o.estimated_minutes||0)>0?`<p>预计时长：${Number(o.estimated_minutes)} 分钟</p>`:"";const estimatedLine=isCharging?`<p>预计结束：${fmt(o.estimated_finish_at)}（提示：具体结束时间因充电器功率大小而异）</p>`:o.estimated_finish_at&&!derivedEnded?`<p>预计结束：${fmt(o.estimated_finish_at)}</p>`:"";const endTime=o.charge_finished_at||official.end_time;const endTimeLine=derivedEnded&&endTime?`<p>结束时间：${fmt(endTime)}</p>`:"";const endPower=official.order_end_power!==null&&official.order_end_power!==undefined?`${Number(official.order_end_power)}W`:"";const endPowerLine=derivedEnded&&endPower?`<p>结束功率：${escapeHtml(endPower)}</p>`:"";const localOrderNo=Number(o.id||0)>0?`#${Number(o.id)}`:"";const officialOrderNo=official.cid||"";const localOrderLine=localOrderNo?`<p>本地订单编号：${escapeHtml(localOrderNo)}</p>`:"";const officialOrderLine=officialOrderNo?`<p>官方订单编号：${escapeHtml(officialOrderNo)}</p>`:"";const durationBlock=hasOfficial?"":durationLine;const endTimeBlock=hasOfficial?"":endTimeLine;const stopReasonBlock=hasOfficial?"":(stopReason?`<p>结束原因：${escapeHtml(stopReason)}</p>`:"");const endPowerBlock=hasOfficial?"":endPowerLine;const stationName=displayStationText(o.station_name)||o.station_name||"未命名站点";return `<article class="order-item"><h3>${escapeHtml(stationName)}</h3><p>充电位：${escapeHtml(slotLabel)}</p>${orderChargeSummaryHtml(o)}<p>创建时间：${fmt(o.created_at)}</p>${durationBlock}${estimatedLine}<p>充电状态：${displayState}</p>${endTimeBlock}${stopReasonBlock}${endPowerBlock}${localOrderLine}${officialOrderLine}${renderOfficialDetail(o)}<p class="hint">结果：${escapeHtml(o.result_message||"处理中")}</p><span class="order-status ${statusClass(o.status)}">${statusLabel(o.status)}</span></article>`}).join(""):'<div class="empty">你还没有订单，先去下一个试试。</div>'}catch(err){els.myOrders.innerHTML=`<div class="empty">加载订单失败：${err.message}</div>`}}
+    async function loadMyOrders(){
+      if(!state.user){
+        els.myOrders.innerHTML='<div class="empty">登录后可查看自己的订单记录。</div>';
+        return
+      }
+      try{
+        const rows=await requestJson("/api/me/orders?limit=50");
+        await syncCurrentUserSummary();
+        const chargeStateLabel={CHARGING_LIVE:"实时充电中",CHARGING_ESTIMATED:"预计充电中",ENDED_ESTIMATED:"已结束",ENDED_LIVE:"已结束",PROCESSING:"处理中",PENDING:"待处理",FAILED:"失败"};
+        const overnightHint='<div class="order-inline-note"><strong>夜间提示</strong> 00:00-07:00 设备停运离线；若订单跨天，预计结束时间会顺延到次日 07:00 后继续计算。</div>';
+        els.myOrders.innerHTML=rows.length?rows.map((o)=>{
+          const shortCode=stationShortCode(o.station_name,o.socket_no);
+          const slotLabel=shortCode||(o.device_code?`${o.device_code}-${o.socket_no}`:`${o.socket_no}号`);
+          const chargeStateUpper=String(o.charge_state||"").toUpperCase();
+          const stopReason=normalizeStopReason(o.charge_stop_reason);
+          const official=o.official_detail||{};
+          const hasOfficial=official&&Object.keys(official).length>0;
+          const officialEnded=hasOfficialEndMarkers(official);
+          const realtimeEnded=String(o.realtime_status||"").trim()==="空闲";
+          const statusUpper=String(o.status||"").toUpperCase();
+          const isActivelyCharging=isOrderActivelyCharging(o);
+          const isInProgress=isActivelyCharging||["PROCESSING","PENDING"].includes(chargeStateUpper);
+          const derivedEnded=!isInProgress&&statusUpper!=="FAILED"&&(chargeStateUpper.startsWith("ENDED")||!!(o.charge_finished_at||officialEnded||realtimeEnded));
+          const displayState=isActivelyCharging?(chargeStateLabel[chargeStateUpper]||"实时充电中"):(derivedEnded?"已结束":(chargeStateLabel[chargeStateUpper]||"-"));
+          const officialWork=Number(official.work_time_minutes);
+          const durationText=Number.isFinite(officialWork)?`${officialWork} 分钟`:Number(o.estimated_minutes||0)>0?`${Number(o.estimated_minutes)} 分钟`:"-";
+          const endTime=(officialEnded&&official.end_time)?official.end_time:(derivedEnded?(o.charge_finished_at||""):"");
+          const endTimeText=derivedEnded&&endTime?fmt(endTime):"-";
+          const estimatedSource=!derivedEnded?(official.end_time||o.estimated_finish_at||""):"";
+          const estimatedText=estimatedSource?fmt(estimatedSource):"-";
+          const stopReasonText=stopReason||(officialEnded?normalizeStopReason(official.order_end_message):"")||"-";
+          const endPower=officialEnded&&official.order_end_power!==null&&official.order_end_power!==undefined?`${Number(official.order_end_power)}W`:"-";
+          const localOrderNo=Number(o.id||0)>0?`#${Number(o.id)}`:"";
+          const officialOrderNo=official.cid||"";
+          const estimateBlock=isInProgress&&!derivedEnded?`<div class="order-inline-note"><strong>预计结束</strong> ${escapeHtml(estimatedText)}${isActivelyCharging&&String(estimatedText||"-")!=="-"?'，具体时间会随充电功率变化':''}</div>${isActivelyCharging?overnightHint:""}`:estimatedSource&&!derivedEnded?`<div class="order-inline-note"><strong>预计结束</strong> ${escapeHtml(estimatedText)}</div>`:"";
+          const idsBlock=localOrderNo||officialOrderNo?`<div class="order-ids">${localOrderNo?`<p>本地订单编号：${escapeHtml(localOrderNo)}</p>`:""}${officialOrderNo?`<p>官方订单编号：${escapeHtml(officialOrderNo)}</p>`:""}</div>`:"";
+          const stationName=displayStationText(o.station_name)||o.station_name||"未命名站点";
+          return `<article class="order-item"><div class="order-card-top"><div><h3>${escapeHtml(stationName)}</h3><p class="order-slot">充电位：${escapeHtml(slotLabel)}</p></div><span class="order-status ${statusClass(o.status)}">${statusLabel(o.status)}</span></div>${orderChargeSummaryHtml(o)}<div class="order-card-grid"><div class="order-kv"><span>创建时间</span><strong>${escapeHtml(fmt(o.created_at))}</strong></div><div class="order-kv"><span>充电状态</span><strong>${escapeHtml(displayState)}</strong></div><div class="order-kv"><span>${hasOfficial?"充电时长":"预计时长"}</span><strong>${escapeHtml(durationText)}</strong></div><div class="order-kv"><span>结束时间</span><strong>${escapeHtml(endTimeText)}</strong></div></div>${estimateBlock}${!hasOfficial&&stopReasonText!=="-"?`<div class="order-inline-note"><strong>结束原因</strong> ${escapeHtml(stopReasonText)}</div>`:""}${!hasOfficial&&endPower!=="-"?`<div class="order-inline-note"><strong>结束功率</strong> ${escapeHtml(endPower)}</div>`:""}${idsBlock}${renderOfficialDetail(o)}<p class="hint">结果：${escapeHtml(o.result_message||"处理中")}</p></article>`
+        }).join(""):'<div class="empty">你还没有订单，先去下一个试试。</div>'
+      }catch(err){
+        els.myOrders.innerHTML=`<div class="empty">加载订单失败：${err.message}</div>`
+      }
+    }
     function qrImageUrl(value){const text=String(value||"").trim();if(!text)return"";if(/^https?:\/\/.+\.(png|jpg|jpeg|webp|gif)(\?.*)?$/i.test(text))return text;return `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(text)}`}
     function pendingRechargeBelongsToUser(data,user){if(!data||!user)return false;const dataUserId=Number(data.userId||0);const currentUserId=Number(user.id||0);if(dataUserId&&currentUserId&&dataUserId===currentUserId)return true;const dataPhone=String(data.userPhone||"").trim();const currentPhone=String(user.phone||"").trim();return !!(dataPhone&&currentPhone&&dataPhone===currentPhone)}
     function savePendingRecharge(data){const payload={...(data||{}),userId:Number(state.user?.id||0)||0,userPhone:String(state.user?.phone||"").trim()};localStorage.setItem(PENDING_RECHARGE_KEY,JSON.stringify(payload))}
@@ -931,15 +1665,15 @@
     function loadPendingRechargeForUser(user){const data=loadPendingRecharge();if(!data||!user)return null;if(pendingRechargeBelongsToUser(data,user))return data;clearPendingRecharge();return null}
     async function queryBridgeRechargeStatus(outTradeNo){const bridge=state.paymentBridgeUrl.replace(/\/$/,"");if(!bridge||!outTradeNo)return null;const resp=await fetch(`${bridge}/api/recharge/status?out_trade_no=${encodeURIComponent(outTradeNo)}`);const text=await resp.text();let data={};try{data=text?JSON.parse(text):{}}catch{data={raw:text}}if(!resp.ok)throw new Error(data.detail||data.raw||`查询支付状态失败：${resp.status}`);return data}
     async function pollRechargeRequest(id,outTradeNo=""){clearInterval(state.rechargePollTimer);state.rechargePollTimer=setInterval(async()=>{if(state.rechargePollBusy)return;state.rechargePollBusy=true;try{if(outTradeNo&&state.paymentBridgeUrl){const bridgeStatus=await queryBridgeRechargeStatus(outTradeNo);if(bridgeStatus&&bridgeStatus.paid){await loadMyRecharges()}}const rows=await requestJson("/api/me/recharge-requests?limit=20");const row=rows.find((item)=>Number(item.id)===Number(id));if(!row)return;if(row.status==="APPROVED"||row.status==="REJECTED"){clearInterval(state.rechargePollTimer);state.rechargePollTimer=null;clearPendingRecharge();await loadMyRecharges();await loadMyWalletLedger();if(row.status==="APPROVED"){const me=await requestJson("/api/me");state.user=me;els.userBalance.textContent=Number(me.balance_yuan||0).toFixed(2);if(els.userFreeCharge)els.userFreeCharge.textContent=String(Number(me.free_charge_count||0));setBox(els.rechargeStatus,`充值已到账（#${row.id}），当前余额：¥${Number(me.balance_yuan||0).toFixed(2)}`,"ok")}else{setBox(els.rechargeStatus,`充值申请已被驳回（#${row.id}）：${row.review_note||"请联系管理员"}`,"fail")}}}catch{}finally{state.rechargePollBusy=false}},10000)}
-    async function createBridgeRecharge(amount,note){const bridge=state.paymentBridgeUrl.replace(/\/$/,"");if(!bridge)throw new Error("未配置支付中转服务");ensureRechargeMethodSupported();const method=rechargeMethodMeta[state.rechargeMethod]||rechargeMethodMeta.wechat_manual;const resp=await fetch(`${bridge}/api/recharge/create`,{method:"POST",headers:{Authorization:`Bearer ${state.token}`,"Content-Type":"application/json"},body:JSON.stringify({amount_yuan:amount,note,pay_type:method.payType})});const text=await resp.text();let data={};try{data=text?JSON.parse(text):{}}catch{data={raw:text}}if(!resp.ok)throw new Error(data.detail||data.raw||`充值支付创建失败：${resp.status}`);els.rechargeAmount.value="";if(data.form_action&&data.form_fields){const form=document.createElement("form");form.method="POST";form.action=data.form_action;form.target=isMobileDevice?"_self":"_blank";Object.entries(data.form_fields||{}).forEach(([key,value])=>{const input=document.createElement("input");input.type="hidden";input.name=key;input.value=String(value??"");form.appendChild(input)});document.body.appendChild(form);form.submit();form.remove()}const payValue=data.pay_url||data.qrcode||(data.provider||{}).payurl||(data.provider||{}).qrcode||(data.provider||{}).url||"";const qrSrc=qrImageUrl(payValue);state.currentRechargeOpenUrl=String(data.pay_url||payValue||"").trim();if(state.currentRechargeOpenUrl){els.rechargeOpenWrap.classList.remove("hidden");if(!isMobileDevice){els.rechargeFrameWrap.classList.remove("hidden");els.rechargePayFrame.src=state.currentRechargeOpenUrl}else{els.rechargeFrameWrap.classList.add("hidden")}}else{els.rechargeOpenWrap.classList.add("hidden");els.rechargeFrameWrap.classList.add("hidden")}if(qrSrc&&!isMobileDevice){els.rechargeQrWrap.classList.remove("hidden");els.rechargeQrImg.src=qrSrc}else{els.rechargeQrWrap.classList.add("hidden")}els.rechargeQrNote.innerHTML=`${method.notePrefix}<br>充值申请 #${data.recharge_request_id} 创建成功。${method.expectsAuto?"支付成功后会自动回调补余额。":"支付成功后请手动联系管理员处理。"}${data.pay_url?`<br><a href="${data.pay_url}" target="_blank" rel="noopener noreferrer">打开支付链接</a>`:""}`;savePendingRecharge({requestId:data.recharge_request_id,outTradeNo:data.out_trade_no,createdAt:Date.now(),paymentMethod:state.rechargeMethod});setBox(els.rechargeStatus,`充值支付已创建（#${data.recharge_request_id}），请完成支付。`,"pending");pollRechargeRequest(data.recharge_request_id,data.out_trade_no||"");await loadMyRecharges()}
+    async function createBridgeRecharge(amount,note){const bridge=state.paymentBridgeUrl.replace(/\/$/,"");if(!bridge)throw new Error("未配置支付中转服务");ensureRechargeMethodSupported();const method=rechargeMethodMeta[state.rechargeMethod]||rechargeMethodMeta.wechat_manual;const resp=await fetch(`${bridge}/api/recharge/create`,{method:"POST",headers:{Authorization:`Bearer ${state.token}`,"Content-Type":"application/json"},body:JSON.stringify({amount_yuan:amount,note,pay_type:method.payType})});const text=await resp.text();let data={};try{data=text?JSON.parse(text):{}}catch{data={raw:text}}if(!resp.ok)throw new Error(data.detail||data.raw||`充值支付创建失败：${resp.status}`);els.rechargeAmount.value="";if(data.form_action&&data.form_fields){const form=document.createElement("form");form.method="POST";form.action=data.form_action;form.target=isMobileDevice?"_self":"_blank";Object.entries(data.form_fields||{}).forEach(([key,value])=>{const input=document.createElement("input");input.type="hidden";input.name=key;input.value=String(value??"");form.appendChild(input)});document.body.appendChild(form);form.submit();form.remove()}const payValue=data.pay_url||data.qrcode||(data.provider||{}).payurl||(data.provider||{}).qrcode||(data.provider||{}).url||"";state.currentRechargeOpenUrl=String(data.pay_url||payValue||"").trim();if(state.currentRechargeOpenUrl){els.rechargeOpenWrap.classList.remove("hidden");if(!isMobileDevice){els.rechargeFrameWrap.classList.remove("hidden");els.rechargePayFrame.src=state.currentRechargeOpenUrl}else{els.rechargeFrameWrap.classList.add("hidden")}}else{els.rechargeOpenWrap.classList.add("hidden");els.rechargeFrameWrap.classList.add("hidden")}savePendingRecharge({requestId:data.recharge_request_id,outTradeNo:data.out_trade_no,createdAt:Date.now(),paymentMethod:state.rechargeMethod});setBox(els.rechargeStatus,`充值支付已创建（#${data.recharge_request_id}），请完成支付。`,"pending");pollRechargeRequest(data.recharge_request_id,data.out_trade_no||"");await loadMyRecharges()}
     async function createManualRechargeRequest(amount,note){const noteText=String(note||"").trim();const payload={amount_yuan:amount,payment_method:"manual_transfer",note:noteText||"已付款，待人工审核"};try{return await requestJson("/api/me/recharge-requests",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)})}catch(err){if(String(err.message||"").includes("已有待审核充值申请"))await loadMyRecharges();throw err}}
     async function submitRecharge(){if(!state.user)throw new Error("请先登录后再充值");const amount=Number(els.rechargeAmount.value||"0");const note=DEFAULT_RECHARGE_NOTE;if(!Number.isFinite(amount)||amount<=0)throw new Error("请输入正确的充值金额");const pending=currentPendingManualRecharge();if((state.manualPaymentEnabled||!state.paymentBridgeUrl)&&pending){setBox(els.rechargeStatus,pendingManualRechargeMessage(pending),"pending");return}if(state.manualPaymentEnabled){openManualPaymentModal(amount,"用于余额充值","recharge");setBox(els.rechargeStatus,"请先扫码付款，付款成功后在弹窗里点击“我已付款，提交审核并返回”。","pending");return}if(state.paymentBridgeUrl){await createBridgeRecharge(amount,note);return}const data=await requestJson("/api/me/recharge-requests",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({amount_yuan:amount,note})});state.pendingManualRecharge=isManualReviewPaymentMethod(data.payment_method)&&String(data.status||"").toUpperCase()==="PENDING"?data:null;els.rechargeAmount.value="";setBox(els.rechargeStatus,data.reused_pending?pendingManualRechargeMessage(data):`充值申请已提交（#${data.id}），请等待管理员审核。`,data.reused_pending?"pending":"ok");syncRechargeSubmitState();await loadMyRecharges()}
     async function submitManualPayment(){if(!state.user)throw new Error("请先登录后再提交付款审核");const amount=Number(els.manualPaymentAmount.value||"0");const noteRaw=els.manualPaymentNote.value.trim();const note=noteRaw||DEFAULT_RECHARGE_NOTE||"已付款，待人工审核";if(!state.manualPaymentEnabled)throw new Error("当前未启用手动收款");if(!Number.isFinite(amount)||amount<=0)throw new Error("请输入正确的付款金额");const pending=currentPendingManualRecharge();if(pending){const message=pendingManualRechargeMessage(pending);setBox(els.manualPaymentStatus,message,"pending");setBox(els.rechargeStatus,message,"pending");return}const data=await createManualRechargeRequest(amount,note);state.pendingManualRecharge=isManualReviewPaymentMethod(data.payment_method)&&String(data.status||"").toUpperCase()==="PENDING"?data:null;els.manualPaymentNote.value="";const message=data.reused_pending?pendingManualRechargeMessage(data):`已记录你的付款申请（#${data.id}），请等待人工确认到账。`;setBox(els.manualPaymentStatus,message,data.reused_pending?"pending":"ok");els.rechargeAmount.value="";setBox(els.rechargeStatus,message,data.reused_pending?"pending":"ok");closeManualPaymentModal();if(state.manualPaymentReturnPage)setActivePage(state.manualPaymentReturnPage);syncRechargeSubmitState();await loadMyRecharges()}
     async function loadMyRecharges(){if(!state.user){state.pendingManualRecharge=null;syncRechargeSubmitState();els.myRecharges.innerHTML='<div class="empty">登录后可查看充值记录。</div>';return}try{const rows=await requestJson("/api/me/recharge-requests?limit=20");state.pendingManualRecharge=rows.find((item)=>String(item.status||"").toUpperCase()==="PENDING"&&isManualReviewPaymentMethod(item.payment_method))||null;syncRechargeSubmitState();const visibleRows=rows.filter((item)=>String(item.status||"").toUpperCase()!=="PENDING");const methodLabel={alipay_auto:"支付宝在线充值",wechat_manual:"微信充值",wxpay:"微信充值",wxpay_auto:"微信在线充值",alipay:"支付宝在线充值",manual_transfer:"扫码付款待审核"};els.myRecharges.innerHTML=visibleRows.length?visibleRows.map((r)=>{const bonusCount=Number(r.bonus_free_charge_granted||r.bonus_free_charge_count||0);return `<article class="recharge-item"><h3>充值 ¥${Number(r.amount_yuan).toFixed(2)}${bonusCount>0?` + 免服务费${bonusCount}次`:""}</h3><p>方式：${methodLabel[r.payment_method]||r.payment_method||"未标记"}</p><p>申请时间：${fmt(r.created_at)}</p><p>备注：${r.note||"无"}</p><p>审核说明：${r.review_note||"暂无"}</p><span class="recharge-status ${statusClass(r.status)}">${statusLabel(r.status)}</span></article>`}).join(""):'<div class="empty">当前只显示已处理的充值记录。</div>'}catch(err){syncRechargeSubmitState();els.myRecharges.innerHTML=`<div class="empty">加载充值记录失败：${err.message}</div>`}}
     function formatLedgerReason(reason){const text=String(reason||"").trim();if(!text)return"余额变动";if(text.startsWith("recharge_request:"))return`充值到账 #${text.split(":")[1]||""}`.trim();if(text.startsWith("order_success_charge:"))return`订单消费 #${text.split(":")[1]||""}`.trim();if(text.startsWith("order_failed_refund:"))return`订单退款 #${text.split(":")[1]||""}`.trim();if(text.startsWith("order_retry_reserve:"))return`订单重新扣款 #${text.split(":")[1]||""}`.trim();if(text==="admin_adjust")return"管理员调整";return"其他余额变动"}
-    async function loadMyWalletLedger(){if(!state.user){els.myWalletLedger.innerHTML='<div class="empty">登录后可查看消费记录。</div>';return}try{const rows=await requestJson("/api/me/wallet-ledger?limit=50");const visibleRows=rows.filter((r)=>!String(r.reason||"").trim().startsWith("admin_"));els.myWalletLedger.innerHTML=visibleRows.length?visibleRows.map((r)=>{const delta=Number(r.delta_yuan||0);const deltaText=`${delta>=0?"+":"-"}¥${Math.abs(delta).toFixed(2)}`;const deltaClass=delta>=0?"plus":"minus";return `<article class="recharge-item"><h3><span class="ledger-amount ${deltaClass}">${deltaText}</span></h3><p>余额：¥${Number(r.balance_after||0).toFixed(2)}</p><p>类型：${escapeHtml(formatLedgerReason(r.reason))}</p><p>时间：${fmt(r.created_at)}</p></article>`}).join(""):'<div class="empty">当前只显示充值与消费记录。</div>'}catch(err){els.myWalletLedger.innerHTML=`<div class="empty">加载消费记录失败：${err.message}</div>`}}
+    async function loadMyWalletLedger(){if(!state.user){els.myWalletLedger.innerHTML='<div class="empty">登录后可查看资金明细。</div>';return}try{const rows=await requestJson("/api/me/wallet-ledger?limit=50");const visibleRows=rows.filter((r)=>!String(r.reason||"").trim().startsWith("admin_"));els.myWalletLedger.innerHTML=visibleRows.length?visibleRows.map((r)=>{const delta=Number(r.delta_yuan||0);const deltaText=`${delta>=0?"+":"-"}¥${Math.abs(delta).toFixed(2)}`;const deltaClass=delta>=0?"plus":"minus";return `<article class="recharge-item"><h3><span class="ledger-amount ${deltaClass}">${deltaText}</span></h3><p>余额：¥${Number(r.balance_after||0).toFixed(2)}</p><p>类型：${escapeHtml(formatLedgerReason(r.reason))}</p><p>时间：${fmt(r.created_at)}</p></article>`}).join(""):'<div class="empty">这里会展示与你账户余额相关的充值与消费记录。</div>'}catch(err){els.myWalletLedger.innerHTML=`<div class="empty">加载资金明细失败：${err.message}</div>`}}
     function normalizeSocketRegions(regions){const grouped=new Map();(regions||[]).forEach((region)=>{const key=statusRegionLabel(region.region);const current=grouped.get(key)||{key,stations:[]};current.stations.push(...(region.stations||[]));grouped.set(key,current)});return STATUS_REGION_ORDER.map((key)=>grouped.get(key)).filter(Boolean).map((group)=>({key:group.key,stations:[...group.stations].sort((a,b)=>stationNoFromName(a.name)-stationNoFromName(b.name)||String(a.name).localeCompare(String(b.name),"zh-CN"))}))}
-    function renderSocketOverviewPanel(){if(!state.socketRegions.length){els.socketOverview.innerHTML='<div class="empty">暂无站点状态。</div>';return}if(!state.socketRegions.some((group)=>group.key===state.selectedStatusRegion)){state.selectedStatusRegion=state.socketRegions[0].key}const active=state.socketRegions.find((group)=>group.key===state.selectedStatusRegion)||state.socketRegions[0];const regionError=state.statusRegionErrors[active.key]||"";const overview=regionOverviewStats(active);const syncMeta=socketOverviewSyncMeta();const soon30=collectUrgentSockets(active,30);const soon60=collectUrgentSockets(active,60,30);const renderSoon=(title,items)=>items.length?`<div class="status-soon"><strong>${escapeHtml(title)}</strong>${items.map((item)=>{const label=stationShortLabel(item.station,active.key)||item.station.name||"站点";return `<span class="soon-chip"><strong>${escapeHtml(label)}-${escapeHtml(item.socket.socket_no)}号</strong><em data-ends-at-ms="${escapeHtml(item.endsAtMs)}">--:--</em></span>`}).join("")}</div>`:"";const urgentHtml=`${renderSoon("30分钟内结束",soon30)}${renderSoon("1小时内结束",soon60)}`;els.socketOverview.innerHTML=`<section class="status-board"><aside class="status-sidebar">${state.socketRegions.map((group)=>`<button class="status-region-btn ${group.key===state.selectedStatusRegion?"active":""}" type="button" data-status-region="${escapeHtml(group.key)}"><strong>${escapeHtml(group.key)}</strong><span>${group.stations.length} 个站点</span></button>`).join("")}</aside><div class="status-content"><div class="status-content-header"><div><h3>${escapeHtml(active.key)}</h3><p> 在线状态将实时更新，夜间设备离线请次日再试。</p><div class="status-sync-note ${syncMeta.stale?"stale":""}">${escapeHtml(syncMeta.text)}</div></div><div class="status-overview-metrics"><div class="status-overview-metric-line"><span class="free">空闲 ${overview.free}</span><span class="busy">使用中 ${overview.busy}</span></div></div></div>${urgentHtml}${regionError?`<div class="station-query-note">${escapeHtml(regionError)}</div>`:""}<div class="status-station-stack">${active.stations.map((station)=>{const counts=stationLiveCounts(station);const stationNo=stationNoFromName(station.name);const title=stationNo===9999?String(station.name||"未命名站点"):`${stationNo}号站`;const sockets=(station.sockets||[]).filter((socket)=>{const s=String(socket.status||"").trim();return s!=="未查询到"&&s!=="未知"});const inlineState=station.realtime_ok?'ok':'warn';const inlineText=station.realtime_ok?'实时':'未查';return`<details class="station-status-card station-collapse"><summary><div class="station-summary-head"><div class="station-summary-main"><span class="station-no-badge">${escapeHtml(title)}</span><div class="station-summary-meta"><span class="station-inline-status ${inlineState}">${escapeHtml(inlineText)}</span><div class="station-counts"><span class="count-pill free">空闲 ${counts.free===null?"-":counts.free}</span><span class="count-pill busy">使用 ${counts.busy===null?"-":counts.busy}</span></div></div></div><div><span class="station-toggle"><span class="toggle-open">详情</span><span class="toggle-close">收起</span></span></div></div></summary><div class="station-collapse-body">${station.query_message?`<div class="station-query-note">${escapeHtml(station.query_message)}</div>`:""}${sockets.length?`<div class="socket-grid">${sockets.map((socket)=>{const raw=String(socket.status||"").trim();const status=(raw==="充电中")?"使用中":raw;const endsAtMs=socketEndsAtMs(socket);return `<div class="socket-chip ${socketTone(status)}"><strong>${escapeHtml(socket.socket_no)}号</strong><span>${escapeHtml(status)}</span>${endsAtMs?`<small class="countdown" data-ends-at-ms="${escapeHtml(endsAtMs)}">--:--</small>`:""}</div>`}).join("")}</div>`:'<div class="empty">当前站点插座状态均未查询到。</div>'}</div></details>`}).join("")}</div></div></section>`;startSocketCountdownTimer()}
+    function renderSocketOverviewPanel(){if(!state.socketRegions.length){els.socketOverview.innerHTML='<div class="empty">暂未获取到站点状态。</div>';return}if(!state.socketRegions.some((group)=>group.key===state.selectedStatusRegion)){state.selectedStatusRegion=state.socketRegions[0].key}const active=state.socketRegions.find((group)=>group.key===state.selectedStatusRegion)||state.socketRegions[0];const regionError=state.statusRegionErrors[active.key]||"";const overview=regionOverviewStats(active);const syncMeta=socketOverviewSyncMeta();const soon30=collectUrgentSockets(active,30);const soon60=collectUrgentSockets(active,60,30);const renderSoon=(title,items)=>items.length?`<div class="status-soon"><strong>${escapeHtml(title)}</strong>${items.map((item)=>{const label=stationShortLabel(item.station,active.key)||item.station.name||"站点";return `<span class="soon-chip"><strong>${escapeHtml(label)}-${escapeHtml(item.socket.socket_no)}号</strong><em data-ends-at-ms="${escapeHtml(item.endsAtMs)}">--:--</em></span>`}).join("")}</div>`:"";const urgentHtml=`${renderSoon("30分钟内预计结束",soon30)}${renderSoon("1小时内预计结束",soon60)}`;els.socketOverview.innerHTML=`<section class="status-board"><aside class="status-sidebar">${state.socketRegions.map((group)=>`<button class="status-region-btn ${group.key===state.selectedStatusRegion?"active":""}" type="button" data-status-region="${escapeHtml(group.key)}"><strong>${escapeHtml(group.key)}</strong><span>${group.stations.length} 个站点</span></button>`).join("")}</aside><div class="status-content"><div class="status-content-header"><div><h3>${escapeHtml(active.key)}</h3><p>站点状态会持续刷新；如遇夜间停运，请于次日 07:00 后再试。</p><div class="status-sync-note ${syncMeta.stale?"stale":""}">${escapeHtml(syncMeta.text)}</div></div><div class="status-overview-metrics"><div class="status-overview-metric-line"><span class="free">空闲 ${overview.free}</span><span class="busy">使用中 ${overview.busy}</span></div></div></div>${urgentHtml}${regionError?`<div class="station-query-note">${escapeHtml(regionError)}</div>`:""}<div class="status-station-stack">${active.stations.map((station)=>{const counts=stationLiveCounts(station);const stationNo=stationNoFromName(station.name);const title=stationNo===9999?String(station.name||"未命名站点"):`${stationNo}号站`;const sockets=(station.sockets||[]).filter((socket)=>{const s=String(socket.status||"").trim();return s!=="未查询到"&&s!=="未知"});const inlineState=station.realtime_ok?'ok':'warn';const inlineText=station.realtime_ok?'实时':'未查';return`<details class="station-status-card station-collapse"><summary><div class="station-summary-head"><div class="station-summary-main"><span class="station-no-badge">${escapeHtml(title)}</span><div class="station-summary-meta"><span class="station-inline-status ${inlineState}">${escapeHtml(inlineText)}</span><div class="station-counts"><span class="count-pill free">空闲 ${counts.free===null?"-":counts.free}</span><span class="count-pill busy">使用 ${counts.busy===null?"-":counts.busy}</span></div></div></div><div><span class="station-toggle"><span class="toggle-open">详情</span><span class="toggle-close">收起</span></span></div></div></summary><div class="station-collapse-body">${station.query_message?`<div class="station-query-note">${escapeHtml(station.query_message)}</div>`:""}${sockets.length?`<div class="socket-grid">${sockets.map((socket)=>{const raw=String(socket.status||"").trim();const status=(raw==="充电中")?"使用中":raw;const endsAtMs=socketEndsAtMs(socket);return `<div class="socket-chip ${socketTone(status)}"><strong>${escapeHtml(socket.socket_no)}号</strong><span>${escapeHtml(status)}</span>${endsAtMs?`<small class="countdown" data-ends-at-ms="${escapeHtml(endsAtMs)}">--:--</small>`:""}</div>`}).join("")}</div>`:'<div class="empty">当前站点暂未获取到可用插座状态。</div>'}</div></details>`}).join("")}</div></div></section>`;startSocketCountdownTimer()}
     async function loadSocketOverview(force=false){if(state.socketOverviewBusy)return;if(!state.socketRegions.length)state.socketRegions=buildStatusRegionCatalog(state.stations);if(!state.socketRegions.length){renderSocketOverviewPanel();return}if(!state.socketRegions.some((group)=>group.key===state.selectedStatusRegion))state.selectedStatusRegion=state.socketRegions[0].key;const activeKey=state.selectedStatusRegion;if(!activeKey){renderSocketOverviewPanel();return}if(state.loadedStatusRegions[activeKey]&&!force){renderSocketOverviewPanel();return}state.socketOverviewBusy=true;const bridge=String(state.socketOverviewBridgeUrl||"").trim().replace(/\/$/,"");const candidates=["/api/socket-overview"];if(bridge&&bridge!==window.location.origin)candidates.push(`${bridge}/api/socket-overview`);let lastErr=null;try{for(const url of candidates){try{const joiner=url.includes("?")?"&":"?";const regions=await requestJson(`${url}${joiner}region=${encodeURIComponent(statusRegionApiLabel(activeKey))}`);state.socketRegions=mergeSocketRegions(state.socketRegions,normalizeSocketRegions(regions));state.loadedStatusRegions[activeKey]=true;delete state.statusRegionErrors[activeKey];renderSocketOverviewPanel();return}catch(err){lastErr=err}}state.statusRegionErrors[activeKey]=`当前站区刷新失败：${lastErr?lastErr.message:"未知错误"}`;renderSocketOverviewPanel()}finally{state.socketOverviewBusy=false}}
     document.querySelectorAll("[data-auth-tab]").forEach((btn)=>btn.onclick=()=>{document.querySelectorAll("[data-auth-tab]").forEach((node)=>node.classList.toggle("active",node===btn));document.getElementById("login-form").classList.toggle("hidden",btn.dataset.authTab!=="login");document.getElementById("register-form").classList.toggle("hidden",btn.dataset.authTab!=="register")});
     pageButtons.forEach((btn)=>btn.onclick=()=>{const page=btn.dataset.page||"status";if(!state.user&&authOnlyPages.has(page)){setBox(els.authStatus,"登录后可下单、充值和查看个人记录。","pending");setActivePage("status");return}setActivePage(page)});
@@ -968,7 +1702,7 @@
     document.getElementById("submit-recharge-btn").onclick=async()=>{if(state.rechargeSubmitting)return;state.rechargeSubmitting=true;syncRechargeSubmitState();try{await submitRecharge()}catch(err){setBox(els.rechargeStatus,`提交失败：${err.message}`,String(err.message||"").includes("已有待审核充值申请")?"pending":"fail")}finally{state.rechargeSubmitting=false;syncRechargeSubmitState()}};
     els.submitManualPaymentBtn.onclick=async()=>{if(state.rechargeSubmitting)return;state.rechargeSubmitting=true;syncRechargeSubmitState();try{await submitManualPayment()}catch(err){setBox(els.manualPaymentStatus,`提交失败：${err.message}`,String(err.message||"").includes("已有待审核充值申请")?"pending":"fail")}finally{state.rechargeSubmitting=false;syncRechargeSubmitState()}};
     els.openRechargeLinkBtn.onclick=()=>{if(state.currentRechargeOpenUrl){window.open(state.currentRechargeOpenUrl,"_blank","noopener,noreferrer")}};
-    renderAmountButtons();applyRechargeMethodUi();syncPageAccess();setActivePage("status");updateBackToTopButton();loadStations().catch(()=>{});loadServiceStatus();state.serviceTimer=setInterval(loadServiceStatus,45000);bootstrapAuth().then(()=>{const pending=loadPendingRechargeForUser(state.user);if(pending&&pending.paymentMethod){state.rechargeMethod=pending.paymentMethod;applyRechargeMethodUi()}if(pending&&pending.requestId&&state.user){pollRechargeRequest(pending.requestId,pending.outTradeNo||"")}}).catch(()=>{});if(!state.token)clearLoginState();
+    renderAmountButtons();applyRechargeMethodUi();renderOrdersHelpNote();syncPageAccess();setActivePage("status");updateBackToTopButton();loadStations().catch(()=>{});loadServiceStatus();state.serviceTimer=setInterval(loadServiceStatus,45000);bootstrapAuth().then(()=>{const pending=loadPendingRechargeForUser(state.user);if(pending&&pending.paymentMethod){state.rechargeMethod=pending.paymentMethod;applyRechargeMethodUi()}if(pending&&pending.requestId&&state.user){pollRechargeRequest(pending.requestId,pending.outTradeNo||"")}}).catch(()=>{});if(!state.token)clearLoginState();
   </script>
 </body>
 </html>
